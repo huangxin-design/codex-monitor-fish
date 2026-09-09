@@ -1,0 +1,21 @@
+# Local runtime outputs may contain project names, paths or usage.
+**/config.json
+**/usage-snapshot.json
+**/usage-summary.csv
+**/*.sqlite*
+**/*.jsonl
+**/*.log
+**/*.pid
+**/__pycache__/
+**/*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+dist/
+qa/
+codex-monitor-fish/
+node_modules/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,38 @@
+name: Build downloadable skill
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Test backend with synthetic data
+        run: python -B -m unittest discover -s skills/codex-token-monitor/assets/app -p "test_*.py" -v
+      - name: Test setup and release integrity
+        run: python -B -m unittest discover -s tests -p "test_*.py" -v
+      - name: Build skill archive
+        run: python -B tooling/build_release.py
+      - name: Verify archive and checksum
+        run: python -B tooling/build_release.py --check
+      - name: Upload downloadable files
+        uses: actions/upload-artifact@v7
+        with:
+          name: codex-token-monitor-skill
+          path: |
+            dist/codex-token-monitor-skill.zip
+            dist/codex-token-monitor-skill.zip.sha256
+          if-no-files-found: error
+          retention-days: 30

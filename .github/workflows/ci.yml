@@ -1,0 +1,41 @@
+name: Tests and package
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python: '3.10'
+          - os: windows-latest
+            python: '3.12'
+          - os: macos-latest
+            python: '3.13'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Test backend with synthetic data
+        run: python -B -m unittest discover -s skills/codex-token-monitor/assets/app -p "test_*.py" -v
+      - name: Test setup and release integrity
+        run: python -B -m unittest discover -s tests -p "test_*.py" -v
+      - name: Build skill archive
+        run: python -B tooling/build_release.py
+      - name: Verify archive and checksum
+        run: python -B tooling/build_release.py --check

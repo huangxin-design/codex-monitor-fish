@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Codex 监控小鱼 · Token 用量监控</title>
+  <link rel="icon" type="image/jpeg" href="/assets/logo.jpg">
+  <style>
+    :root{color-scheme:dark;--paper:#090809;--surface:#121012;--ink:#f5eff0;--muted:#a49b9f;--line:#ffffff10;--accent:#ff6574;--red:#b50104;--deep-red:#3b080f;--shadow:0 12px 34px #0002}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font-family:"Segoe UI","Microsoft YaHei",sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}body:before{content:"";position:absolute;z-index:-1;inset:0 0 auto;height:720px;pointer-events:none;background:radial-gradient(ellipse at 86% 0%,#690d1918,transparent 58%)}button,input,select{font:inherit}button,select{color:inherit}button{cursor:pointer;touch-action:manipulation}button:focus-visible,select:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid #ff9ca8;outline-offset:4px}button:disabled{cursor:wait;opacity:.55}button svg{width:16px;height:16px;flex-shrink:0}svg{display:block}a{color:var(--accent);text-underline-offset:3px}main{max-width:1480px;margin:auto;padding:26px 48px 24px}
+    .topbar{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:24px;padding-bottom:23px;margin-bottom:28px;border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;gap:11px;font-size:15px;font-weight:650;letter-spacing:-.015em;white-space:nowrap}.brandmark{width:34px;height:34px;display:grid;place-items:center;background:linear-gradient(145deg,#e71b31,#830111);color:#fff;border:1px solid #f74a5d70;border-radius:11px;box-shadow:inset 0 1px #ffabb75c,0 3px 15px #b400171f}.brandmark img{display:block;width:100%;height:100%;object-fit:cover;border-radius:inherit}.brandmark{overflow:hidden;flex-shrink:0}.profile{position:relative}.avatar-feedback{position:absolute;right:0;top:100%;z-index:5;width:225px;padding:8px 11px;border-radius:8px;background:#31121c;color:#f3b8c5;font-size:11px;white-space:normal;box-shadow:0 5px 15px #0004}.local-tag{font-size:11px;color:#aaa0a5;padding-left:14px;margin-left:2px;border-left:1px solid #ffffff16;font-weight:400;letter-spacing:.13em}.profile{display:flex;align-items:center;gap:10px;border-left:1px solid var(--line);padding-left:22px}.avatar-wrap{padding:3px;border:1px solid #ee33494d;border-radius:50%;background:#1b0c10;box-shadow:0 0 16px #ad001216}.avatar-wrap img{width:32px;height:32px;border-radius:50%;display:block;object-fit:cover}.profile-copy{font-size:12px;font-weight:500;line-height:1.5}.profile-copy span{display:block;font-size:11px;font-weight:400;color:var(--muted);letter-spacing:.06em;margin-top:2px}.status{display:flex;gap:8px;align-items:center;font-size:11px;color:var(--muted)}.status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:#ff586c;box-shadow:0 0 0 4px #d9203820,0 0 12px #e72a3e66}.status[data-state="paused"] .status-dot{background:#aaa0a6;box-shadow:0 0 0 4px #ffffff0b}.status[data-state="error"] .status-dot{background:#ffb1ba;box-shadow:0 0 0 4px #d9203833}
+    .hero{isolation:isolate;position:relative;display:grid;grid-template-columns:55% 45%;align-items:center;min-height:326px;padding:32px 38px;overflow:hidden;gap:0;margin-bottom:22px;border:1px solid #ffffff12;border-radius:22px;background:radial-gradient(ellipse at 90% 105%,#a70b251f,transparent 57%),linear-gradient(110deg,#141013 10%,#100c0e 70%,#160c10);box-shadow:inset 0 1px #ffffff05,var(--shadow)}.hero:before{content:"";position:absolute;z-index:-1;inset:0;pointer-events:none;background-image:radial-gradient(#9c546950 .65px,transparent .9px);background-size:6px 6px;mask-image:linear-gradient(100deg,transparent 34%,#0005 85%)}.hero:after{content:"";position:absolute;bottom:-1px;left:34%;right:4%;height:1px;background:linear-gradient(90deg,transparent,#e02a4590,#ff768080,transparent);box-shadow:0 0 24px 5px #cf17372a;pointer-events:none}.hero-copy{position:relative;z-index:2;flex:1;min-width:0}.eyebrow{display:inline-flex;align-items:center;gap:7px;margin:0 0 14px;color:#dcb9c0;font-size:11px;font-weight:500;letter-spacing:.12em;padding:4px 9px;border:1px solid #dc7e921f;border-radius:30px;background:#ffffff03}.eyebrow:before{content:"";width:4px;height:4px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px #ff4555}h1{margin:0;font-size:clamp(34px,3.7vw,50px);letter-spacing:-.055em;line-height:1.25;font-weight:650}.intro{margin:13px 0 0;color:#aea2a8;font-size:12px;line-height:1.9}.hero-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:26px}.button{border:1px solid #ffffff18;border-radius:30px;background:linear-gradient(180deg,#ffffff07,#ffffff02);padding:9px 15px;display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;font-size:12px;min-height:39px;box-shadow:inset 0 1px #ffffff06;transition:background .18s,border-color .18s,box-shadow .18s}.button:hover{background:#ffffff0d;border-color:#ffffff30}.button.primary{background:linear-gradient(180deg,#e51b32,#b6041b);border-color:#f5475b87;color:#fff;box-shadow:inset 0 1px #ffb9c459,0 4px 18px #d006262b}.button.primary:hover{background:linear-gradient(180deg,#ef3045,#cd0a24);box-shadow:inset 0 1px #ffc5cf70,0 4px 23px #d0062644}.hero-art{width:calc(100% + 38px);height:280px;margin-left:-38px;position:relative;align-self:center;pointer-events:none}.hero-art svg{width:100%;height:100%;overflow:visible}.orb-depth{transform:translate(var(--pointer-x,0px),var(--pointer-y,0px))}.mesh-depth{transform:translate(calc(var(--pointer-x,0px) * -.4),calc(var(--pointer-y,0px) * -.4))}.orbit-drift{transform-origin:184px 114px;animation:orbit-drift 18s ease-in-out infinite alternate}.orbit-point{offset-path:path("M51 114 A133 46 0 1 0 317 114 A133 46 0 1 0 51 114");offset-rotate:0deg;animation:orbit-travel 32s linear infinite}.orbit-point.secondary{animation-duration:42s;animation-delay:-18s}.motion-paused .orbit-drift,.motion-paused .orbit-point{animation-play-state:paused}@keyframes orbit-drift{from{transform:rotate(-5deg)}to{transform:rotate(7deg)}}@keyframes orbit-travel{to{offset-distance:100%}}.art-caption{position:absolute;bottom:-3px;left:0;width:100%;max-width:405px;text-align:center;font-size:11px;letter-spacing:.22em;color:#9f6b77}.error{background:#3b101c;border:1px solid #9c354b70;border-radius:12px;color:#ffd6dc;padding:12px 16px;font-size:13px;margin-bottom:18px}
+    .scope-explainer{margin:0 0 24px;padding:0 2px;color:var(--muted);font-size:12px}.scope-explainer summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;width:fit-content;max-width:100%;font-size:12px}.scope-explainer summary::-webkit-details-marker{display:none}.scope-explainer summary svg{width:15px;height:15px;flex-shrink:0;color:#bd8d98}.scope-explainer strong{font-weight:500;color:#cdb8c0}.scope-hint{color:#8f838a;font-size:11px;margin-left:3px;display:flex;align-items:center;gap:6px;white-space:nowrap}.scope-hint:after{content:"⌄";font-size:15px;line-height:1;transition:transform .2s}.scope-explainer[open] .scope-hint:after{transform:rotate(180deg)}.scope-body{padding:11px 15px;margin-top:10px;border:1px solid #ffffff0d;border-radius:10px;background:#ffffff02;line-height:1.9}.scope-body p{margin:3px 0}.scope-explainer a{color:#df97a4}
+    .metrics{display:grid;grid-template-columns:1.16fr 1fr 1fr 1fr;gap:13px;margin-bottom:27px}.metric{position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(135deg,#171316,#111011);border:1px solid #ffffff11;border-radius:16px;padding:22px 23px 20px;box-shadow:inset 0 1px #ffffff03,var(--shadow);min-width:0}.metric:nth-child(2){background:linear-gradient(135deg,#1b171b,#121014)}.metric:nth-child(3){background:linear-gradient(135deg,#1c141c,#120f15)}.metric:nth-child(4){background:linear-gradient(135deg,#1b1517,#130f11)}.metric.total{background:radial-gradient(ellipse at 100% -30%,#b5103747,transparent 64%),linear-gradient(120deg,#231117,#180e12);border-color:#af35434d}.metric.total:after{content:"";z-index:-1;position:absolute;right:-40px;bottom:-80px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,#d4142f22,transparent 66%)}.metric.total:before{content:"";position:absolute;top:-1px;left:20px;right:20px;height:1px;background:linear-gradient(90deg,transparent,#f5687b9c,transparent)}.metric-label{font-size:12px;color:#b7a9b0;display:flex;justify-content:space-between;align-items:center;gap:8px}.metric.total .metric-label{color:#e4c6cf}.metric-icon{width:26px;height:26px;border:1px solid #ffffff0e;border-radius:8px;background:#ffffff03;display:grid;place-items:center;color:#bba3ad;font-size:17px}.metric-icon svg{width:14px;height:14px}.metric.total .metric-icon{background:#be203521;border-color:#e6354826;color:#ff8e9b}.metric-value{font-size:clamp(24px,2.9vw,41px);font-weight:580;font-variant-numeric:tabular-nums;letter-spacing:-.055em;line-height:1.15;margin:19px 0 6px;overflow-wrap:anywhere;color:#f7eff2}.metric.total .metric-value{color:#ff8190}.metric-unit{font-size:11px;font-weight:400;letter-spacing:.12em;color:#b3a5ad}.metric-note{font-size:11px;line-height:1.7;color:#a89ca3;margin-top:19px;min-height:19px;overflow-wrap:anywhere}.metric.total .metric-note{color:#c3a8b2}
+    .workspace{border:1px solid #ffffff13;border-radius:18px;background:#121012;box-shadow:inset 0 1px #ffffff04,var(--shadow);overflow:hidden}.table-toolbar{padding:23px 25px;display:flex;justify-content:space-between;align-items:center;gap:18px}.section-heading{display:flex;align-items:center;gap:10px}.section-heading:before{content:"";width:3px;height:15px;border-radius:3px;background:#da263d;box-shadow:0 0 11px #bb17374d}.section-heading h2{font-size:16px;font-weight:600;margin:0;letter-spacing:-.02em}.badge{background:#ffffff05;border:1px solid #ffffff0c;color:#afa1a9;font-size:11px;padding:2px 8px;border-radius:30px;white-space:nowrap}.table-controls{display:flex;align-items:center;gap:18px;flex-wrap:wrap}.toggle-label{display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;white-space:nowrap;color:#c9bec4}.toggle-label input{appearance:none;margin:0;width:30px;height:18px;background:#494047;border:1px solid #ffffff12;border-radius:20px;cursor:pointer;position:relative;transition:background .15s;flex-shrink:0}.toggle-label input:after{content:"";width:12px;height:12px;border-radius:50%;background:#f6e7ed;position:absolute;top:2px;left:2px;box-shadow:0 1px 3px #0004;transition:left .15s}.toggle-label input:checked{background:#be1531;border-color:#d73b5470}.toggle-label input:checked:after{left:14px}.sort-label{display:flex;gap:7px;align-items:center;color:#a799a2;font-size:11px;white-space:nowrap}.sort-label select{font-size:11px;border:1px solid #ffffff12;border-radius:7px;background:#1a1619;padding:6px 8px;max-width:140px;min-height:31px}.table-wrap{overflow-x:auto;scrollbar-color:#4c2835 #171115;scrollbar-width:thin}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:14px;min-width:930px}col.name-col{width:27%}col.model-col{width:13%}col.num-col{width:11%}col.total-col{width:13%}col.time-col{width:14%}thead{background:#ffffff04}th{font-weight:400;color:#9f909a;font-size:12px;padding:14px 16px;text-align:right;white-space:nowrap;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}th:first-child{text-align:left;padding-left:25px}th.model{text-align:left}td{padding:23px 16px;border-bottom:1px solid #ffffff09;text-align:right;vertical-align:middle;font-variant-numeric:tabular-nums}tbody tr:last-child td{border-bottom:0}td:first-child{text-align:left;padding-left:25px}tr.task-row{background:#0e0c0f;transition:background .15s}tr.task-row:nth-of-type(4n+3){background:#110e12}tr.task-row:hover,tr.task-row.is-expanded{background:#20121a}.task-title-button{border:0;padding:0;background:transparent;display:flex;align-items:flex-start;gap:10px;text-align:left;width:100%;color:var(--ink)}.task-index{font-size:11px;line-height:22px;color:#826c78;min-width:16px;font-variant-numeric:tabular-nums}.chevron{width:12px;height:12px;flex-shrink:0;margin-top:5px;color:#9e7485;transition:transform .15s}.task-title-button[aria-expanded="true"] .chevron{transform:rotate(90deg);color:var(--accent)}.task-title{font-size:14px;font-weight:600;line-height:1.65;overflow-wrap:anywhere}.task-meta{display:block;color:#a2949c;font-size:12px;font-weight:400;margin-top:5px;line-height:1.6}.model-cell{text-align:left;color:#b5a4ae;font-size:12px;overflow-wrap:anywhere}.model-chip{display:inline-block;border:1px solid #ffffff0f;background:#ffffff03;border-radius:5px;padding:3px 6px;max-width:100%;overflow-wrap:anywhere}.numeric{white-space:nowrap;color:#d1c5cd;font-size:14px}.total-cell{color:#f78598;font-weight:600}.time-cell{color:#a99aa4;font-size:12px;line-height:1.8;white-space:nowrap}.detail-row td{padding:0 25px 22px;background:#09080b;text-align:left}.detail-content{padding-top:18px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.detail-card{border:1px solid #c26a891f;border-radius:10px;padding:14px 16px;background:linear-gradient(130deg,#21151e,#161017)}.detail-card h3{font-size:13px;margin:0 0 11px;font-weight:500;color:#e1cdd8}.detail-card dl{margin:0}.detail-card dl div{display:flex;justify-content:space-between;gap:10px;margin:7px 0;font-size:12px}.detail-card dt{color:#a08e9b}.detail-card dd{margin:0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;text-align:right}.detail-card .detail-total{border-top:1px solid #ffffff0e;padding-top:9px;margin-top:9px;font-weight:600;color:#f78da1}.detail-card .detail-total dt{color:#c492a4}.detail-metadata{grid-column:1/-1;color:#a4919f;font-size:12px;overflow-wrap:anywhere;line-height:1.8}.task-alias{margin:0 0 7px;color:#c5b2bf}.task-warning{color:#ef9dad;font-size:11px;margin:7px 0 0}.empty{padding:48px;text-align:center!important;color:var(--muted)}.table-footer{padding:15px 25px;color:#a08f9b;font-size:11px;display:flex;gap:12px;justify-content:space-between;border-top:1px solid var(--line);background:#ffffff03}.table-footer strong{font-weight:400;color:#c29dad}
+    .lower-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}.panel{padding:23px 25px;border:1px solid #ffffff0e;border-radius:16px;background:linear-gradient(135deg,#141114,#100e10);min-width:0}.panel h2{margin:0;font-size:13px;font-weight:500;letter-spacing:-.01em}.panel-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.panel-kicker{font-size:11px;letter-spacing:.08em;color:#9b7d8c}.panel-subtitle{font-size:11px;color:#a08e9a;margin:6px 0 0;line-height:1.8}.daily-chart{height:126px;display:flex;align-items:stretch;gap:8px;margin-top:20px}.day{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;min-width:0}.day-bar-wrap{flex:1;display:flex;align-items:flex-end;background:linear-gradient(to top,#54152a19,transparent);border-bottom:1px solid #ffffff0d;border-radius:4px}.day-bar{width:100%;height:var(--height);min-height:2px;background:linear-gradient(to top,#59132a,#bb3856);border:1px solid #ff799321;border-radius:5px 5px 0 0;box-shadow:inset 0 1px #ffadc43d}.day:last-child .day-bar{background:linear-gradient(to top,#91192e,#ee5269);box-shadow:inset 0 1px #ffa2b47a,0 0 18px #df28551f}.day-label{font-size:11px;text-align:center;color:#a38a9a;white-space:nowrap}.method-list{padding-left:17px;margin:16px 0 0;color:#ac99a7;font-size:11px;line-height:1.85}.method-list li{margin:8px 0;padding-left:3px}.method-list li::marker{color:#8e3850}.notes{margin-top:22px;color:#978793;font-size:11px;line-height:1.9}.notes p{margin:4px 0}.source{overflow-wrap:anywhere;color:#85767f}.page-footer{display:flex;justify-content:space-between;gap:15px;color:#93828e;font-size:11px;letter-spacing:.035em;margin:23px 0 0;padding-top:18px;border-top:1px solid #ffffff0a}.page-footer-brand{display:flex;align-items:center;gap:7px}.footer-dot{width:4px;height:4px;border-radius:50%;background:#ad2945}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}[hidden]{display:none!important}
+    @media(min-width:1500px){main{padding-top:32px}.hero{min-height:312px}.metric{padding:25px 27px}.metric-value{margin-top:24px}td{padding-top:22px;padding-bottom:22px}}
+    @media(max-width:1200px){main{padding:25px 28px}.local-tag{display:none}.hero{padding:30px}.hero-art{width:calc(100% + 24px);height:256px;margin-left:-24px}.metric{padding:20px}.table-toolbar{align-items:flex-start}.table-controls{gap:10px}.metrics{gap:11px}.metric-note{font-size:11px}.profile-copy{display:none}.profile{padding-left:16px}}
+    @media(max-width:980px){main{padding:24px}.topbar{gap:16px}.hero-art{width:calc(100% + 16px);height:230px;margin-left:-16px}.hero{padding:28px;min-height:292px;gap:0}.metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.metric{padding:21px 24px}.metric-value{font-size:36px}.metric-note{margin-top:13px}.table-toolbar{padding:22px;flex-wrap:wrap}.table-controls{gap:14px}.table-wrap{overflow:visible}table,tbody{display:block;min-width:0;width:100%}colgroup,thead{display:none}.task-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px 18px;border:1px solid #ffffff0c;border-radius:12px;padding:17px 18px;margin:0 16px 12px;background:linear-gradient(125deg,#100d11,#0b090c)}td{display:block;padding:0;border:0;text-align:left;min-width:0}td:first-child{padding:0}.name-cell{grid-column:1/3;grid-row:1}.task-title{font-size:14px}.task-meta{font-size:12px}.task-index{min-width:17px}.model-cell{grid-column:1/-1;grid-row:2;padding-left:27px;margin-top:-7px}.model-chip{padding:2px 6px;font-size:11px}.numeric{font-size:14px;white-space:normal;overflow-wrap:anywhere}.numeric:before{content:attr(data-label);display:block;font-size:11px;color:#a48e9e;font-weight:400;margin-bottom:4px}.total-cell{grid-column:3;grid-row:1;text-align:right;font-size:17px;align-self:start;letter-spacing:-.035em}.total-cell:before{font-size:11px;letter-spacing:0}.time-cell{grid-column:1/-1;font-size:11px;border-top:1px solid #ffffff08;padding-top:10px;color:#a08b99}.time-cell:before{content:"最近活动 · ";color:#897381}.detail-row{display:block;margin:-5px 16px 13px}.detail-row td{display:block;padding:0 0 10px;border-radius:10px}.detail-content{padding:12px;gap:10px}.detail-card{padding:12px}.detail-metadata{padding:0 3px}.detail-card dl div{font-size:11px}.empty{display:block;padding:35px 20px}.table-footer{padding:16px 22px;flex-wrap:wrap;gap:5px}.lower-grid{grid-template-columns:1fr 1fr}.panel{padding:21px}.day-label{font-size:11px}.daily-chart{gap:5px}}
+    @media(max-width:650px){main{padding:20px 16px}.topbar{grid-template-columns:1fr auto;gap:12px;margin-bottom:18px;padding-bottom:17px}.brand{font-size:14px}.brandmark{width:31px;height:31px;border-radius:9px}.profile{grid-column:2;grid-row:1;border:0;padding:0}.avatar-wrap img{width:30px;height:30px}.status{grid-column:1/-1;grid-row:2;font-size:11px;margin-left:3px;gap:9px}.hero{display:block;min-height:286px;padding:25px 23px 27px;border-radius:17px;margin-bottom:16px}.hero-copy{max-width:100%}.hero-art{position:absolute;z-index:-1;right:-56px;top:-21px;width:225px;height:200px;margin-left:0;opacity:.44}.hero:before{mask-image:linear-gradient(120deg,transparent,#0003)}.art-caption{display:none}.eyebrow{font-size:11px;margin-bottom:17px;padding:4px 8px}h1{font-size:34px;letter-spacing:-.055em}.intro{font-size:11px;margin-top:12px;max-width:235px;color:#c2aeb9;line-height:1.9}.hero-actions{gap:7px;margin-top:23px}.button{font-size:11px;padding:8px 11px;gap:5px;min-height:37px}.button svg{width:14px;height:14px}.scope-explainer{margin-bottom:19px;padding:0 3px}.scope-explainer summary{gap:7px;font-size:11px;align-items:flex-start;line-height:1.8}.scope-explainer summary svg{margin-top:2px;width:13px;height:13px}.scope-hint{font-size:11px;margin-left:auto;gap:3px}.scope-body{font-size:11px;padding:10px 12px}.metrics{gap:10px;margin-bottom:19px}.metric{padding:17px 16px;border-radius:13px}.metric-label{font-size:11px;gap:4px}.metric-icon{width:22px;height:22px;font-size:14px;border-radius:6px}.metric-value{font-size:30px;margin-top:17px;letter-spacing:-.06em}.metric-unit{font-size:11px}.metric-note{font-size:11px;margin-top:13px;min-height:34px;line-height:1.7}.table-toolbar{padding:18px 16px;gap:15px}.section-heading h2{font-size:15px}.table-controls{display:grid;grid-template-columns:1fr auto;gap:13px 12px;width:100%}.toggle-label{font-size:11px;grid-column:1/-1}.sort-label{font-size:11px;justify-content:flex-start;gap:7px}.sort-label:last-child{justify-content:flex-end}.sort-label select{font-size:11px;padding:5px 6px;max-width:120px}.badge{font-size:11px}.task-row{gap:12px 11px;margin:0 11px 11px;padding:15px 13px}.task-index{display:none}.task-title-button{gap:8px}.task-title{font-size:14px;line-height:1.65}.task-meta{font-size:12px;line-height:1.6;margin-top:5px}.chevron{width:10px;height:10px;margin-top:6px}.model-cell{padding-left:18px;margin-top:-4px}.numeric{font-size:13px}.numeric:before{font-size:11px;margin-bottom:3px}.total-cell{font-size:15px;line-height:1.6;letter-spacing:-.045em}.total-cell:before{font-size:11px}.time-cell{font-size:11px;padding-top:8px}.detail-row{margin:-4px 11px 11px}.detail-content{grid-template-columns:1fr;padding:10px;gap:10px}.detail-card{padding:13px 14px}.detail-card dl div{font-size:11px}.detail-metadata{font-size:11px}.table-footer{padding:13px 16px;font-size:11px;gap:6px}.lower-grid{grid-template-columns:1fr;gap:14px;margin-top:16px}.panel{padding:20px}.daily-chart{height:125px;gap:6px}.day-label{font-size:11px}.panel-subtitle{font-size:11px}.panel-kicker{font-size:11px}.method-list{font-size:11px}.notes{margin-top:18px;font-size:11px}.page-footer{display:block;margin-top:19px;font-size:11px;line-height:1.9}.page-footer>span{display:flex;margin:4px 0}.source{font-size:11px}}
+    @media(max-width:360px){main{padding:16px 12px}.hero{padding:23px 17px}h1{font-size:30px}.button{padding:8px 9px;font-size:11px}.metric{padding:15px 12px}.metric-value{font-size:26px}.scope-hint{font-size:0}.scope-hint:after{font-size:13px}.table-controls{gap:12px 8px}.sort-label{gap:5px}.total-cell{font-size:13px}}
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}.orb-depth,.mesh-depth{transform:none}}
+  </style>
+</head>
+<body>
+<main>
+  <header class="topbar">
+    <div class="brand"><span class="brandmark"><img id="brand-logo" src="/assets/logo.jpg" alt="H 品牌标识" width="34" height="34"></span>Codex 监控小鱼 <span class="local-tag">TOKEN MONITOR</span></div>
+    <div class="status" id="status" role="status" aria-live="polite"><span class="status-dot" aria-hidden="true"></span><span id="status-text">正在连接本地记录…</span></div>
+    <div class="profile"><button class="avatar-wrap" id="avatar-button" type="button" title="更换我的头像" aria-label="更换我的头像"><img id="user-avatar" src="/assets/avatar.svg" alt="用户头像" width="32" height="32"></button><input id="avatar-upload" type="file" accept="image/jpeg,image/png,image/webp" hidden><div class="profile-copy">我的工作台<span>PERSONAL WORKSPACE</span></div><span class="avatar-feedback" id="avatar-feedback" role="status" hidden></span></div>
+  </header>
+  <section class="hero" aria-labelledby="page-title">
+    <div class="hero-copy"><p class="eyebrow">PERSONAL WORKSPACE / 本地用量</p><h1 id="page-title">Token 用量监控</h1><p class="intro">让每一次创作，都有迹可循。<br><span id="project-intro">自动发现所选项目的新增任务，持续记录历史用量。</span></p>
+    <div class="hero-actions">
+      <button class="button" id="pause" type="button" aria-pressed="false"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M7 5v10M13 5v10"/></svg><span id="pause-label">暂停刷新</span></button>
+      <button class="button" id="export" type="button" disabled><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M10 3v9m-3-3 3 3 3-3M4 12v4h12v-4"/></svg>导出 CSV</button>
+      <button class="button primary" id="refresh" type="button"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M15.5 7A6 6 0 1 0 16 12M16 3v4h-4" stroke-linecap="round" stroke-linejoin="round"/></svg>立即刷新</button>
+    </div>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <svg viewBox="0 0 340 235" preserveAspectRatio="xMinYMid meet" fill="none">
+        <defs>
+          <radialGradient id="orb-glow"><stop stop-color="#eb153d" stop-opacity=".32"/><stop offset="1" stop-color="#eb153d" stop-opacity="0"/></radialGradient>
+          <radialGradient id="orb-body" cx=".78" cy=".25" r=".85"><stop stop-color="#ff8295"/><stop offset=".12" stop-color="#ed1d3b"/><stop offset=".35" stop-color="#930820"/><stop offset=".65" stop-color="#260b15"/><stop offset="1" stop-color="#120c10"/></radialGradient>
+          <linearGradient id="orb-line" x1="60" y1="40" x2="270" y2="210" gradientUnits="userSpaceOnUse"><stop stop-color="#ec7893" stop-opacity="0"/><stop offset=".55" stop-color="#df4266" stop-opacity=".25"/><stop offset=".82" stop-color="#ff6b84" stop-opacity=".7"/><stop offset="1" stop-color="#ed4f72" stop-opacity="0"/></linearGradient>
+          <linearGradient id="mesh-line" x1="0" y1="180" x2="340" y2="200" gradientUnits="userSpaceOnUse"><stop stop-color="#d91d49" stop-opacity="0"/><stop offset=".55" stop-color="#d91d49" stop-opacity=".4"/><stop offset="1" stop-color="#d91d49" stop-opacity="0"/></linearGradient>
+        </defs>
+        <ellipse cx="188" cy="122" rx="160" ry="128" fill="url(#orb-glow)"/>
+        <g class="mesh-depth" stroke="url(#mesh-line)" stroke-width=".6"><path d="M-18 209Q62 110 165 190T365 172M-18 219Q66 123 165 198T365 181M-18 229Q70 137 165 206T365 190M-18 239Q74 151 165 214T365 199M-18 249Q78 165 165 222T365 208"/><path d="m37 174-13 65m47-79-5 77m42-71 8 70m29-54 11 53m29-34 18 35m14-24 22 22m-1-23 27 19m-5-27 31 19m-9-33 37 20"/></g>
+        <g class="orb-depth"><circle cx="184" cy="106" r="76" fill="url(#orb-body)"/>
+        <g class="orbit-drift"><ellipse cx="184" cy="114" rx="133" ry="46" transform="rotate(-27 184 114)" stroke="url(#orb-line)"/>
+        <ellipse cx="184" cy="114" rx="149" ry="56" transform="rotate(-27 184 114)" stroke="url(#orb-line)" stroke-width=".5" opacity=".5"/>
+        <g transform="rotate(-27 184 114)"><g class="orbit-point"><circle r="3" fill="#ff8da1"/><circle r="8" fill="#eb486a" fill-opacity=".12"/></g><circle class="orbit-point secondary" r="2" fill="#de4568"/></g></g></g>
+        <circle cx="65" cy="170" r="2" fill="#de4568"/><circle cx="44" cy="62" r="2" fill="#9c3250"/>
+        <path d="M273 179h17m-8.5-8.5v17M78 49h11m-5.5-5.5v11" stroke="#ae4963" stroke-opacity=".4" stroke-width=".7"/>
+      </svg>
+      <span class="art-caption">EVERY TOKEN, A TRACE.</span>
+    </div>
+  </section>
+  <div class="error" id="error" role="alert" hidden></div>
+  <details class="scope-explainer" aria-label="项目处理量与账户额度的区别">
+    <summary><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 7v4m0-7v1"/></svg><strong>项目历史处理量 ≠ 账户额度消耗比例</strong><span class="scope-hint">统计说明</span></summary>
+    <div class="scope-body"><p>本页累计所选项目自任务开始以来的输入与输出，包括缓存和重复读取的上下文；账户额度重置后，这里的历史量仍然保留。</p>
+    <p>Codex 的“使用情况”显示账户在当前额度窗口内的剩余比例。模型、上下文、推理、工具使用和缓存都会影响额度消耗，不能按这里的 Token 总量换算百分比。<a href="https://learn.chatgpt.com/docs/pricing#what-are-the-usage-limits-for-my-plan" target="_blank" rel="noopener noreferrer">官方说明</a></p></div>
+  </details>
+  <section class="metrics" aria-label="用量概览">
+    <article class="metric total"><div class="metric-label">项目累计处理量<span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 11 6 8l3 2 4-6M10 4h3v3"/></svg></span></div><div class="metric-value" id="total-value">—</div><div class="metric-unit">TOKENS</div><div class="metric-note" id="total-note">全部历史 · 输入 + 输出</div></article>
+    <article class="metric"><div class="metric-label">未缓存输入<span class="metric-icon" aria-hidden="true">↗</span></div><div class="metric-value" id="input-value">—</div><div class="metric-unit">TOKENS</div><div class="metric-note">输入 token 扣除缓存部分</div></article>
+    <article class="metric"><div class="metric-label">缓存输入<span class="metric-icon" aria-hidden="true">◫</span></div><div class="metric-value" id="cached-value">—</div><div class="metric-unit">TOKENS</div><div class="metric-note" id="cache-note">缓存是输入的一部分</div></article>
+    <article class="metric"><div class="metric-label">输出<span class="metric-icon" aria-hidden="true">↙</span></div><div class="metric-value" id="output-value">—</div><div class="metric-unit">TOKENS</div><div class="metric-note" id="reasoning-note">包含推理 token</div></article>
+  </section>
+  <section class="workspace" aria-labelledby="tasks-heading">
+    <div class="table-toolbar"><div class="section-heading"><h2 id="tasks-heading">任务用量</h2><span class="badge" id="task-count">读取中</span></div><div class="table-controls"><label class="toggle-label"><input id="include-children" type="checkbox" checked>包含子任务</label><label class="sort-label">单位<select id="unit"><option value="yi">亿 Token</option><option value="raw">原始 Token</option></select></label><label class="sort-label">排序<select id="sort"><option value="total">用量从高到低</option><option value="activity">最近有活动</option><option value="title">任务名称</option></select></label></div></div>
+    <div class="table-wrap"><table><caption class="sr-only">每个任务的累计 token 用量。点击任务名称查看本体与子任务明细。缓存输入已包含在输入列。</caption><colgroup><col class="name-col"><col class="model-col"><col class="num-col"><col class="num-col"><col class="num-col"><col class="total-col"><col class="time-col"></colgroup><thead><tr><th scope="col">任务 / 点击查看明细</th><th class="model" scope="col">模型</th><th scope="col">输入</th><th scope="col">其中缓存</th><th scope="col">输出</th><th scope="col">合计</th><th scope="col">最近活动</th></tr></thead><tbody id="tasks"><tr><td class="empty" colspan="7">正在读取本地 token 记录…</td></tr></tbody></table></div>
+    <div class="table-footer"><span id="scope-note">当前统计包含任务本体与子任务</span><span>合计 = 输入 + 输出 · <strong>缓存、推理不重复相加</strong></span></div>
+  </section>
+  <div class="lower-grid">
+    <section class="panel" id="daily-panel" aria-labelledby="daily-heading"><div class="panel-heading"><h2 id="daily-heading">每日用量</h2><span class="panel-kicker">DAILY ACTIVITY</span></div><p class="panel-subtitle" id="daily-subtitle">最近 14 个有记录日期 · 包含子任务 · 悬停查看精确数量</p><div class="daily-chart" id="daily-chart" role="img" aria-label="正在读取每日用量"></div></section>
+    <section class="panel" aria-labelledby="method-heading"><div class="panel-heading"><h2 id="method-heading">这些数字如何计算</h2><span class="panel-kicker">HOW IT WORKS</span></div><ul class="method-list" id="methodology"><li>读取本地任务记录中的 token 用量，并按任务归集。</li><li>缓存输入属于输入；推理输出属于输出。</li><li>悬停数字可核对完整整数，也可切换显示单位。</li></ul></section>
+  </div>
+  <aside class="notes" aria-label="统计说明"><p>仅使用本地用量元数据。Token 数不是人民币账单，也不等于订阅额度的消耗比例；外部图片、视频等工具费用未单独计入。</p><p id="warnings"></p><p class="source" id="source"></p></aside>
+  <footer class="page-footer"><span class="page-footer-brand"><i class="footer-dot" aria-hidden="true"></i>Token Monitor · 本地统计</span><span id="update-time">等待首次读取 · 每 10 秒自动刷新</span></footer>
+</main>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const keys = ['input_tokens','cached_input_tokens','output_tokens','reasoning_output_tokens','total_tokens'];
+const numberFormat = new Intl.NumberFormat('zh-CN');
+const yiFormat = new Intl.NumberFormat('zh-CN', {maximumFractionDigits:4});
+const expanded = new Set();
+let data = null, paused = false, busy = false, timer = null, refreshSeconds = 10;
+const format = value => numberFormat.format(Number(value) || 0);
+const formatToken = (value, suffix = true) => {
+  const number = Number(value) || 0;
+  if ($('unit').value === 'raw') return format(number);
+  const yi = number / 100000000;
+  return (number > 0 && yi < 0.0001 ? '<0.0001' : yiFormat.format(yi)) + (suffix ? ' 亿' : '');
+};
+const amount = (object, key) => Number(object && object[key]) || 0;
+const selectedUsage = task => $('include-children').checked ? task.usage : task.own;
+const el = (tag, className, text) => {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+};
+const tokenNode = (tag, className, value) => {
+  const node = el(tag, className, formatToken(value));
+  node.title = format(value) + ' Token';
+  return node;
+};
+
+const hero = document.querySelector('.hero');
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+let motionFrame = 0, pointerX = 0, pointerY = 0, targetX = 0, targetY = 0;
+function moveHero() {
+  pointerX += (targetX - pointerX) * .12;
+  pointerY += (targetY - pointerY) * .12;
+  const settled = Math.abs(targetX - pointerX) + Math.abs(targetY - pointerY) < .03;
+  if (settled) { pointerX = targetX; pointerY = targetY; }
+  hero.style.setProperty('--pointer-x', pointerX.toFixed(2) + 'px');
+  hero.style.setProperty('--pointer-y', pointerY.toFixed(2) + 'px');
+  motionFrame = settled ? 0 : requestAnimationFrame(moveHero);
+}
+function aimHero(x, y) {
+  if (reduceMotion.matches || document.hidden) return;
+  targetX = x; targetY = y;
+  if (!motionFrame) motionFrame = requestAnimationFrame(moveHero);
+}
+hero.addEventListener('pointermove', event => {
+  if (event.pointerType !== 'mouse') return;
+  const rect = hero.getBoundingClientRect();
+  aimHero(((event.clientX - rect.left) / rect.width - .5) * 24, ((event.clientY - rect.top) / rect.height - .5) * 18);
+});
+hero.addEventListener('pointerleave', () => aimHero(0, 0));
+function syncHeroMotion() {
+  const stopped = reduceMotion.matches || document.hidden;
+  hero.classList.toggle('motion-paused', stopped);
+  if (stopped) {
+    cancelAnimationFrame(motionFrame);
+    motionFrame = pointerX = pointerY = targetX = targetY = 0;
+    hero.style.setProperty('--pointer-x', '0px');
+    hero.style.setProperty('--pointer-y', '0px');
+  }
+}
+reduceMotion.addEventListener('change', syncHeroMotion);
+document.addEventListener('visibilitychange', syncHeroMotion);
+syncHeroMotion();
+
+const avatarKey = 'huanghuayu-monitor-avatar';
+try {
+  const savedAvatar = localStorage.getItem(avatarKey);
+  if (/^data:image\/(jpeg|png|webp);base64,/.test(savedAvatar || '')) $('user-avatar').src = savedAvatar;
+} catch {}
+$('avatar-button').addEventListener('click', () => $('avatar-upload').click());
+$('avatar-upload').addEventListener('change', async event => {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  const feedback = $('avatar-feedback'); feedback.hidden = true;
+  try {
+    if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024) throw new Error('请选择不超过 2 MB 的 JPG、PNG 或 WebP 图片。');
+    const url = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('图片读取失败，请重新选择。'));
+      reader.readAsDataURL(file);
+    });
+    const preview = new Image(); preview.src = url;
+    try { await preview.decode(); } catch { throw new Error('无法识别这张图片，请换一张。'); }
+    $('user-avatar').src = url;
+    try { localStorage.setItem(avatarKey, url); }
+    catch { throw new Error('头像已显示，但浏览器未能保存；下次打开需重新选择。'); }
+  } catch (error) { feedback.textContent = error.message; feedback.hidden = false; }
+});
+
+try { if (localStorage.getItem('token-monitor-unit') === 'raw') $('unit').value = 'raw'; } catch {}
+function totalsFor(tasks) {
+  const total = Object.fromEntries(keys.map(key => [key, 0]));
+  for (const task of tasks) for (const key of keys) total[key] += amount(selectedUsage(task), key);
+  return total;
+}
+function validDate(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+function timeText(value, dateOnly = false) {
+  const date = validDate(value);
+  if (!date) return '暂无记录';
+  return date.toLocaleString('zh-CN', dateOnly ? {month:'2-digit',day:'2-digit'} : {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+}
+function setStatus(text, state = '') {
+  $('status-text').textContent = text;
+  $('status').dataset.state = state;
+}
+function detailCard(title, usage) {
+  const card = el('div', 'detail-card');
+  card.append(el('h3', '', title));
+  const list = el('dl');
+  for (const [key, label] of [['input_tokens','输入'],['cached_input_tokens','其中缓存'],['output_tokens','输出'],['reasoning_output_tokens','其中推理'],['total_tokens','合计']]) {
+    const row = el('div', key === 'total_tokens' ? 'detail-total' : '');
+    row.append(el('dt', '', label), tokenNode('dd', '', amount(usage,key)));
+    list.append(row);
+  }
+  card.append(list);
+  return card;
+}
+function taskRows(task, index) {
+  const usage = selectedUsage(task);
+  const row = el('tr', 'task-row' + (expanded.has(task.id) ? ' is-expanded' : ''));
+  const nameCell = el('td','name-cell');
+  const titleButton = el('button', 'task-title-button');
+  titleButton.type = 'button';
+  titleButton.setAttribute('aria-expanded', String(expanded.has(task.id)));
+  titleButton.setAttribute('aria-controls', 'detail-' + index);
+  const arrow = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  arrow.setAttribute('viewBox','0 0 16 16'); arrow.setAttribute('class','chevron'); arrow.setAttribute('aria-hidden','true');
+  const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d','m6 3 5 5-5 5'); path.setAttribute('fill','none'); path.setAttribute('stroke','currentColor'); path.setAttribute('stroke-width','1.4');
+  arrow.append(path);
+  const title = el('span','task-title',task.title || task.screenshot_title || '未命名任务');
+  const childCount = Number(task.child_count) || 0;
+  title.append(el('span','task-meta',(task.archived ? '已归档 · ' : '') + (childCount ? childCount + ' 个子任务' : '独立任务')));
+  titleButton.append(el('span','task-index',String(index + 1).padStart(2,'0')),arrow,title); nameCell.append(titleButton); row.append(nameCell);
+  const model = el('td','model-cell'); model.append(el('span','model-chip',task.model || '未记录')); row.append(model);
+  for (const [key,label] of [['input_tokens','输入'],['cached_input_tokens','其中缓存'],['output_tokens','输出'],['total_tokens','合计']]) {
+    const cell = tokenNode('td','numeric' + (key === 'total_tokens' ? ' total-cell' : ''),amount(usage,key));
+    cell.dataset.label = label;
+    row.append(cell);
+  }
+  const time = el('td','time-cell',timeText(task.last_activity));
+  const fullDate = validDate(task.last_activity);
+  if (fullDate) time.title = fullDate.toLocaleString('zh-CN',{hour12:false});
+  row.append(time);
+  const detail = el('tr','detail-row'); detail.id = 'detail-' + index; detail.hidden = !expanded.has(task.id);
+  const cell = el('td'); cell.colSpan = 7;
+  const content = el('div','detail-content');
+  content.append(detailCard('任务本体',task.own),detailCard('子任务 · ' + childCount + ' 个',task.children),detailCard($('include-children').checked ? '当前统计 · 含子任务' : '当前统计 · 仅本体',usage));
+  const metadata = el('div','detail-metadata','任务 ID：' + task.id + ' · 用量记录：' + format(task.response_count) + ' 条' + (task.records_source ? ' · 数据来源：' + task.records_source : ''));
+  if (task.screenshot_title && task.screenshot_title !== task.title) metadata.prepend(el('p','task-alias','原始截图标题：' + task.screenshot_title));
+  for (const warning of task.warnings || []) metadata.append(el('p','task-warning',warning));
+  content.append(metadata); cell.append(content); detail.append(cell);
+  titleButton.addEventListener('click', () => {
+    const next = !expanded.has(task.id);
+    if (next) expanded.add(task.id); else expanded.delete(task.id);
+    titleButton.setAttribute('aria-expanded',String(next)); row.classList.toggle('is-expanded',next); detail.hidden = !next;
+  });
+  return [row,detail];
+}
+function render() {
+  $('project-intro').textContent = '自动发现 ' + (data.project_name || '所选项目') + ' 的新增任务，持续记录历史用量。';
+  const tasks = Array.isArray(data.tasks) ? [...data.tasks] : [];
+  const total = totalsFor(tasks);
+  for (const [id, value] of [['total-value',total.total_tokens],['input-value',Math.max(0,total.input_tokens-total.cached_input_tokens)],['cached-value',total.cached_input_tokens],['output-value',total.output_tokens]]) {
+    $(id).textContent = formatToken(value, false);
+    $(id).title = format(value) + ' Token';
+  }
+  document.querySelectorAll('.metric-unit').forEach(node => { node.textContent = $('unit').value === 'yi' ? '亿 TOKENS' : 'TOKENS'; });
+  $('total-note').textContent = '全部历史 · ' + tasks.length + ' 个任务 · ' + ($('include-children').checked ? '包含子任务' : '仅任务本体');
+  $('cache-note').textContent = total.input_tokens ? '占全部输入的 ' + (total.cached_input_tokens/total.input_tokens*100).toFixed(1) + '%' : '缓存是输入的一部分';
+  $('reasoning-note').textContent = '其中推理 ' + formatToken(total.reasoning_output_tokens) + ' Token';
+  $('reasoning-note').title = format(total.reasoning_output_tokens) + ' Token';
+  $('task-count').textContent = tasks.length + ' 个任务';
+  $('scope-note').textContent = $('include-children').checked ? '当前统计包含任务本体与子任务' : '当前仅统计任务本体，已排除子任务';
+  const sort = $('sort').value;
+  tasks.sort((a,b) => sort === 'title' ? (a.title || '').localeCompare(b.title || '','zh-CN') : sort === 'activity' ? (validDate(b.last_activity)?.getTime() || 0)-(validDate(a.last_activity)?.getTime() || 0) : amount(selectedUsage(b),'total_tokens')-amount(selectedUsage(a),'total_tokens'));
+  const body = $('tasks'); body.replaceChildren();
+  if (!tasks.length) { const row = el('tr'); const cell = el('td','empty','没有找到可统计的任务记录。'); cell.colSpan = 7; row.append(cell); body.append(row); }
+  tasks.forEach((task,index) => body.append(...taskRows(task,index)));
+  $('daily-panel').hidden = !$('include-children').checked;
+  const days = (Array.isArray(data.daily) ? data.daily : []).slice().sort((a,b) => a.date.localeCompare(b.date)).slice(-14);
+  const chart = $('daily-chart'); chart.replaceChildren();
+  if (!days.length) {
+    chart.append(el('p','panel-subtitle','暂无每日用量记录。'));
+    chart.setAttribute('aria-label','暂无每日用量记录');
+  } else {
+    const max = Math.max(1,...days.map(day => amount(day,'total_tokens')));
+    chart.setAttribute('aria-label',days.map(day => day.date + '：' + formatToken(day.total_tokens) + ' Token').join('；'));
+    for (const day of days) {
+      const column = el('div','day'); column.title = day.date + ' · ' + formatToken(day.total_tokens) + ' Token' + ($('unit').value === 'yi' ? '（' + format(day.total_tokens) + ' Token）' : '');
+      const wrap = el('div','day-bar-wrap'), bar = el('div','day-bar');
+      bar.style.setProperty('--height', Math.max(1,amount(day,'total_tokens')/max*100) + '%');
+      wrap.append(bar); column.append(wrap,el('span','day-label',day.date.slice(5).replace('-','/'))); chart.append(column);
+    }
+  }
+  $('methodology').replaceChildren(...(data.methodology && data.methodology.length ? data.methodology : ['读取本地任务记录中的 token 用量，并按任务归集。','缓存输入属于输入；推理输出属于输出。','悬停数字可核对完整整数，也可切换显示单位。']).map(text => el('li','',text)));
+  $('warnings').textContent = (data.warnings || []).join('；');
+  $('source').textContent = data.source_home ? '记录位置：' + data.source_home : '';
+  $('export').disabled = tasks.length === 0;
+  updateFooter();
+}
+function updateFooter() {
+  const date = data && validDate(data.generated_at);
+  $('update-time').textContent = (date ? '更新于 ' + date.toLocaleString('zh-CN',{hour12:false}) : '等待首次读取') + (paused ? ' · 自动刷新已暂停' : ' · 每 ' + refreshSeconds + ' 秒自动刷新');
+}
+function schedule() {
+  clearTimeout(timer);
+  if (!paused) timer = setTimeout(refresh,refreshSeconds*1000);
+}
+async function refresh() {
+  if (busy) return;
+  clearTimeout(timer); busy = true; $('refresh').disabled = true;
+  const controller = new AbortController(), timeout = setTimeout(() => controller.abort(),12000);
+  try {
+    if (location.protocol === 'file:') throw new Error('请通过“打开监控器”启动页面，直接打开 HTML 无法读取本地用量。');
+    const response = await fetch('/api/usage',{cache:'no-store',signal:controller.signal});
+    if (!response.ok) {
+      const problem = await response.json().catch(() => ({}));
+      throw new Error(problem.error || ('本地服务返回错误（' + response.status + '）。'));
+    }
+    const next = await response.json();
+    if (!next || !Array.isArray(next.tasks)) throw new Error('收到的用量数据格式不正确。');
+    data = next; refreshSeconds = Math.max(5,Number(data.refresh_seconds) || 10);
+    render(); $('error').hidden = true;
+    setStatus(paused ? '自动刷新已暂停' : '本地监控中 · 每 ' + refreshSeconds + ' 秒刷新',paused ? 'paused' : '');
+  } catch (error) {
+    const reason = error.name === 'AbortError' ? '读取超时。' : error.message === 'Failed to fetch' ? '无法连接本地监控服务。' : error.message;
+    $('error').textContent = reason + (data ? ' 页面保留上次成功读取的数据，可点击“立即刷新”重试。' : ' 请重新运行“打开监控器”，再点击“立即刷新”。');
+    $('error').hidden = false;
+    setStatus('连接异常 · 等待重试','error');
+    if (!data) { const row = el('tr'); const cell = el('td','empty','暂时无法读取记录，请检查上方提示。'); cell.colSpan = 7; row.append(cell); $('tasks').replaceChildren(row); $('task-count').textContent = '尚未读取'; }
+  } finally { clearTimeout(timeout); busy = false; $('refresh').disabled = false; schedule(); }
+}
+function exportCsv() {
+  if (!data) return;
+  const scope = $('include-children').checked ? '含子任务' : '仅任务本体';
+  const rows = [['任务','任务 ID','统计范围','模型','输入 token','缓存输入 token','未缓存输入 token','输出 token','推理输出 token','合计 token','子任务数量','最近活动']];
+  for (const task of data.tasks) {
+    const usage = selectedUsage(task);
+    rows.push([task.title || task.screenshot_title || '',task.id,scope,task.model || '',amount(usage,'input_tokens'),amount(usage,'cached_input_tokens'),Math.max(0,amount(usage,'input_tokens')-amount(usage,'cached_input_tokens')),amount(usage,'output_tokens'),amount(usage,'reasoning_output_tokens'),amount(usage,'total_tokens'),task.child_count || 0,task.last_activity || '']);
+  }
+  const total = totalsFor(data.tasks);
+  rows.push(['合计','',scope,'',total.input_tokens,total.cached_input_tokens,Math.max(0,total.input_tokens-total.cached_input_tokens),total.output_tokens,total.reasoning_output_tokens,total.total_tokens,'','']);
+  const csvCell = value => {
+    let text = String(value ?? '');
+    if (typeof value === 'string' && /^[=+\-@\t\r]/.test(text)) text = "'" + text;
+    return '"' + text.replaceAll('"','""') + '"';
+  };
+  const blob = new Blob(['\ufeff' + rows.map(row => row.map(csvCell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob), link = el('a');
+  link.href = url; link.download = 'token用量-' + scope + '-' + new Date().toLocaleDateString('sv-SE') + '.csv';
+  document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url),1000);
+}
+$('refresh').addEventListener('click',refresh);
+$('pause').addEventListener('click',() => {
+  paused = !paused; $('pause').setAttribute('aria-pressed',String(paused)); $('pause-label').textContent = paused ? '继续刷新' : '暂停刷新';
+  setStatus(paused ? '自动刷新已暂停' : '本地监控中 · 每 ' + refreshSeconds + ' 秒刷新',paused ? 'paused' : '');
+  updateFooter(); clearTimeout(timer); if (!paused) refresh();
+});
+$('include-children').addEventListener('change',() => { if (data) render(); });
+$('sort').addEventListener('change',() => { if (data) render(); });
+$('unit').addEventListener('change',() => {
+  try { localStorage.setItem('token-monitor-unit',$('unit').value); } catch {}
+  if (data) render();
+});
+$('export').addEventListener('click',exportCsv);
+refresh();
+</script>
+</body>
+</html>
