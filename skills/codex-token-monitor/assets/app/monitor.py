@@ -1,5 +1,6 @@
 """Read-only, local Codex usage monitor. Python standard library only."""
 import argparse
+import copy
 import csv
 import io
 import json
@@ -9,6 +10,7 @@ from pathlib import Path
 import posixpath
 import sqlite3
 import threading
+import time
 from contextlib import closing
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -93,7 +95,7 @@ def select_targets(config, rows, edges, cutoff_ms=None):
                 and (rows.get(ident, {}).get('created_at_ms') or 0) > cutoff_ms)]
 
 
-def parse_records(path, thread_id, cutoff=None):
+def parse_records(path, thread_id, cutoff=None, progress=None):
     """Sum per-response usage, never cumulative counters or inherited history."""
     result = {'usage': zero(), 'response_count': 0, 'last_activity': None,
               'daily': {}, 'warnings': [], 'models': []}
@@ -105,7 +107,18 @@ def parse_records(path, thread_id, cutoff=None):
     own_records = False
     cutoff_time = parse_time(cutoff) if cutoff else None
     with Path(path).open('rb') as stream:
+        if progress is not None:
+            size = os.fstat(stream.fileno()).st_size
+            consumed = reported = 0
+            last_report = time.monotonic()
+            progress(0, size)
         for raw in stream:
+            if progress is not None:
+                consumed += len(raw)
+                now = time.monotonic()
+                if consumed - reported >= 1024 * 1024 or now - last_report >= 0.1:
+                    progress(consumed, max(size, consumed))
+                    reported, last_report = consumed, now
             if not raw.endswith(b'\n'):
                 partial_tail = True
                 continue  # Active writers may not have completed the last record.
@@ -138,12 +151,14 @@ def parse_records(path, thread_id, cutoff=None):
             if recorded_at is None:
                 result['warnings'].append('一条用量记录缺少有效时间，未计入每日分布。')
                 if cutoff_time:
+                    result['unavailable'] = True
                     continue
             elif cutoff_time and recorded_at > cutoff_time:
                 continue
             response_id = payload.get('response_id')
             if not isinstance(response_id, str) or not response_id:
                 result['warnings'].append('一条用量记录缺少请求编号，未纳入总计。')
+                result['unavailable'] = True
                 continue
             if response_id in seen:
                 continue
@@ -154,6 +169,7 @@ def parse_records(path, thread_id, cutoff=None):
                     or usage['cached_input_tokens'] > usage['input_tokens']
                     or usage['reasoning_output_tokens'] > usage['output_tokens']):
                 result['warnings'].append('一条用量记录字段不完整，未纳入总计。')
+                result['unavailable'] = True
                 continue
             seen.add(response_id)
             result['usage'] = add(result['usage'], usage)
@@ -164,17 +180,22 @@ def parse_records(path, thread_id, cutoff=None):
                 result['daily'][day] = result['daily'].get(day, 0) + usage['total_tokens']
             if model and model not in result['models']:
                 result['models'].append(model)
+        if progress is not None:
+            progress(consumed, max(size, consumed))
     if malformed:
         result['warnings'].append(f'{malformed} 行日志损坏，统计可能不完整。')
+        result['unavailable'] = True
     if partial_tail:
         result['warnings'].append('日志末行尚未写完，将在下次刷新重新读取。')
+        result['unavailable'] = True
     if legacy_records and not own_records:
         raise MonitorError('发现仅含旧版 token_count 累计计数的任务日志，无法可靠计算逐次请求用量。'
-                           '此监控需要 token_usage_record；当前任务日志不兼容，请排除此旧任务后再统计。')
+                           '累计值可能包含继承的历史，不能作为该任务的独立消耗。')
     if own_records and not result['response_count'] and not cutoff:
         raise MonitorError('任务含逐次用量记录，但所有记录的字段均无效；无法提供可靠的用量总计。')
-    if not result['response_count'] and not cutoff:
+    if not result['response_count'] and (not cutoff or not own_records):
         result['warnings'].append('尚无可统计的逐次请求记录；显示 0 不代表确认没有消耗。')
+        result['unavailable'] = True
     result['warnings'] = list(dict.fromkeys(result['warnings']))
     return result
 
@@ -197,7 +218,17 @@ class Monitor:
         self.path_cache = {}
         self.lock = threading.Lock()
 
-    def read_usage(self, row, cutoff):
+    def read_usage(self, row, cutoff, progress=None):
+        callback_failed = False
+
+        def report(done, total):
+            nonlocal callback_failed
+            try:
+                progress(done, total)
+            except Exception:
+                callback_failed = True
+                raise
+
         try:
             def within_home(value):
                 # Validate before probing a path supplied by the task index.
@@ -238,21 +269,34 @@ class Monitor:
             signature = (str(path), stat.st_size, stat.st_mtime_ns, cutoff)
             cached = self.cache.get(row['id'])
             if cached and cached[0] == signature:
+                if progress is not None:
+                    report(stat.st_size, stat.st_size)
                 return cached[1]
-            data = parse_records(path, row['id'], cutoff)
+            try:
+                data = (parse_records(path, row['id'], cutoff, report) if progress is not None
+                        else parse_records(path, row['id'], cutoff))
+            except MonitorError as exc:
+                if callback_failed:
+                    raise
+                data = {'usage': zero(), 'response_count': 0, 'last_activity': None,
+                        'daily': {}, 'models': [], 'unavailable': True,
+                        'warnings': ['该任务用量无法确认，未纳入已确认总计：' + str(exc)]}
             self.cache[row['id']] = (signature, data)
             return data
         except MonitorError:
             raise
         except (OSError, ValueError, RuntimeError):
+            if callback_failed:
+                raise
             return {'usage': zero(), 'response_count': 0, 'last_activity': None,
-                    'daily': {}, 'models': [], 'warnings': ['无法读取该任务日志，未纳入消耗；总数不完整。']}
+                    'daily': {}, 'models': [], 'unavailable': True,
+                    'warnings': ['无法读取该任务日志，用量无法确认，未纳入已确认总计。']}
 
-    def snapshot(self, cutoff=None):
+    def snapshot(self, cutoff=None, progress=None):
         with self.lock:
-            return self._snapshot(cutoff)
+            return self._snapshot(cutoff, progress)
 
-    def _snapshot(self, cutoff):
+    def _snapshot(self, cutoff, progress=None):
         db = self.home / 'state_5.sqlite'
         if not db.is_file():
             raise MonitorError('未找到 Codex 的 state_5.sqlite。请检查 CODEX_HOME 或 config.json 中的 codex_home；'
@@ -281,7 +325,7 @@ class Monitor:
         targets = select_targets(self.config, rows, edges, cutoff_ms)
         roots = {task['id'] for task in targets}
         excluded = set(self.config.get('exclude_task_ids', []))
-        tasks, daily, warnings = [], {}, []
+        plans = []
         assigned = set()
         for target in targets:
             root = target['id']
@@ -291,19 +335,66 @@ class Monitor:
                     if child not in members and child not in roots and child not in excluded:
                         members.add(child)
                         pending.append(child)
+            unique = members - assigned
+            assigned.update(members)
+            plans.append((target, members, unique))
+
+        tasks, daily = [], {}
+        state = {'tasks_total': len(plans), 'tasks_done': 0,
+                 'logs_total': len(assigned), 'logs_done': 0, 'current_task': '',
+                 'log_bytes_done': 0, 'log_bytes_total': 0, 'percent': None}
+        partial = None
+
+        def emit(final=False):
+            if progress is None:
+                return
+            fraction = (min(state['log_bytes_done'] / state['log_bytes_total'], 0.999999)
+                        if state['log_bytes_total'] else 0)
+            # Each distinct task log has equal weight; bytes refine only the current log.
+            state['percent'] = (100 if final else
+                                min(99.999999, 100 * (state['logs_done'] + fraction)
+                                    / state['logs_total']) if state['logs_total'] else None)
+            progress({'progress': dict(state), 'partial_snapshot': partial})
+
+        def file_progress(done, total):
+            state['log_bytes_done'], state['log_bytes_total'] = done, total
+            emit()
+
+        emit()
+        for target, members, unique in plans:
+            root = target['id']
+            row = rows.get(root, {})
+            title = row.get('name') or target.get('screenshot_title') or '未命名任务'
+            state['current_task'] = str(title)
+            emit()
             own, children = zero(), zero()
+            unavailable_logs = 0
+            own_unavailable = children_unavailable = False
             task_warnings, models = [], []
             latest, response_count = None, 0
             for ident in sorted(members):
-                if ident in assigned:
+                if ident not in unique:
                     task_warnings.append('发现重复子任务关系，已只计入一个任务。')
                     continue
-                assigned.add(ident)
                 row = rows.get(ident)
                 if not row:
                     task_warnings.append('任务索引缺失，统计可能不完整。')
+                    unavailable_logs += 1
+                    if ident == root:
+                        own_unavailable = True
+                    else:
+                        children_unavailable = True
+                    state['logs_done'] += 1
+                    emit()
                     continue
-                data = self.read_usage(row, cutoff)
+                data = (self.read_usage(row, cutoff, file_progress) if progress is not None
+                        else self.read_usage(row, cutoff))
+                if data.get('unavailable'):
+                    unavailable_logs += 1
+                    if ident == root:
+                        own_unavailable = True
+                    else:
+                        children_unavailable = True
                 if ident == root:
                     own = data['usage']
                 else:
@@ -315,18 +406,39 @@ class Monitor:
                     latest = max(latest or '', data['last_activity'])
                 for day, amount in data['daily'].items():
                     daily[day] = daily.get(day, 0) + amount
+                state['logs_done'] += 1
+                state['log_bytes_done'] = state['log_bytes_total'] = 0
+                emit()
             row = rows.get(root, {})
             tasks.append({
-                'id': root, 'title': row.get('name') or target.get('screenshot_title') or '未命名任务',
+                'id': root, 'title': title,
                 'screenshot_title': target.get('screenshot_title', ''),
                 'archived': bool(row.get('archived')),
                 'own': own, 'children': children, 'usage': add(own, children),
+                'unavailable_logs': unavailable_logs, 'own_unavailable': own_unavailable,
+                'children_unavailable': children_unavailable,
                 'child_count': len(members) - 1, 'response_count': response_count,
                 'last_activity': latest,
                 'model': ' / '.join(dict.fromkeys(models)) or row.get('model') or '未记录',
                 'records_source': '逐次请求记录（按请求编号去重）',
                 'warnings': list(dict.fromkeys(task_warnings)),
             })
+            state['tasks_done'] += 1
+            if progress is not None:
+                partial = self._snapshot_data(cutoff, copy.deepcopy(tasks), daily)
+                emit()
+        result = self._snapshot_data(cutoff, tasks, daily)
+        if progress is not None:
+            partial = copy.deepcopy(result)
+            state['current_task'] = ''
+            emit(final=True)
+        return result
+
+    def _snapshot_data(self, cutoff, tasks, daily):
+        warnings = []
+        incomplete = any(t['unavailable_logs'] for t in tasks)
+        if incomplete:
+            warnings.append('部分任务用量无法确认；总计和每日分布仅包含已确认记录，不能视为完整消耗。')
         if any(t['warnings'] for t in tasks):
             warnings.append('部分记录尚未写入或无法读取，请展开任务查看；总计仅包含已读到的记录。')
         return {
@@ -336,6 +448,7 @@ class Monitor:
             'project_directory': self.config.get('project_directory'),
             'project_name': self.config.get('project_name') or Path(self.config['project_directory']).name,
             'tasks': tasks, 'totals': add(*(t['usage'] for t in tasks)),
+            'incomplete': incomplete,
             'daily': [{'date': day, 'total_tokens': amount} for day, amount in sorted(daily.items())],
             'warnings': warnings,
             'methodology': [
@@ -351,6 +464,8 @@ class Monitor:
 
 
 def csv_bytes(data):
+    if data.get('incomplete'):
+        raise MonitorError('部分任务用量无法确认，当前统计不完整，暂不能导出 CSV。')
     stream = io.StringIO(newline='')
     writer = csv.writer(stream)
     writer.writerow(['当前任务名称', '截图名称', '任务编号', '本体Token', '子任务Token',

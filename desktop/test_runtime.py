@@ -209,19 +209,42 @@ class HttpTests(unittest.TestCase):
             time.sleep(0.01)
         self.fail(f'usage did not reach {expected}: {status} {data}')
 
-    def blocked_scan(self, result=None, error=None):
+    def blocked_scan(self, result=None, error=None, updates=(), finish_updates=()):
         entered, release = threading.Event(), threading.Event()
         self.scan_gates.append(release)
 
-        def scan():
+        def scan(progress=None):
+            for update in updates:
+                progress(update)
             entered.set()
             if not release.wait(5):
                 raise RuntimeError('test scan wait timed out')
+            for update in finish_updates:
+                progress(update)
             if error:
                 raise error
             return result
 
         return Mock(side_effect=scan), entered, release
+
+    def progress_update(self, snapshot, done=1, percent=50):
+        partial = json.loads(json.dumps(snapshot))
+        partial['tasks'] = partial['tasks'][:done]
+        partial['totals'] = runtime.accounting.add(*(task['usage'] for task in partial['tasks']))
+        partial['daily'] = [{'date': '2026-01-01',
+                             'total_tokens': partial['totals']['total_tokens']}] if done else []
+        return {'progress': {'tasks_total': len(snapshot['tasks']), 'tasks_done': done,
+                             'logs_total': 3, 'logs_done': done, 'current_task': 'Design',
+                             'log_bytes_done': 40, 'log_bytes_total': 100, 'percent': percent},
+                'partial_snapshot': partial if done else None}
+
+    def assert_scan_error(self, response, message):
+        self.assertEqual(response['error'], message)
+        self.assertEqual(response['project_directory'], self.state.config['project_directory'])
+        self.assertEqual(response['source_home'], str(self.home.resolve()))
+        self.assertIsNone(response['progress'])
+        self.assertIsNone(response['partial_snapshot'])
+        self.assertNotIn('totals', response)
 
     def test_setup_api_returns_token_and_usage_requires_selection(self):
         status, _, body = self.request('GET', '/api/setup')
@@ -248,7 +271,9 @@ class HttpTests(unittest.TestCase):
         self.assertLess(time.monotonic() - start, 1)
         self.assertEqual(status, 202)
         self.assertEqual(json.loads(body), {'status': 'loading', 'message': '正在读取历史记录，请稍候…',
-                                           'project_name': 'Alpha'})
+                                           'project_name': 'Alpha', 'project_directory': 'C:/Projects/Alpha',
+                                           'source_home': str(self.home.resolve()), 'progress': None,
+                                           'partial_snapshot': None})
         self.assertTrue(entered.wait(1))
         for _ in range(4):
             self.assertEqual(self.request('GET', '/api/usage?refresh=1')[0], 202)
@@ -263,7 +288,7 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(scan.call_count, 1)
 
     def test_cached_refresh_retains_timestamp_and_default_polling_is_throttled(self):
-        self.state.configure({'project_directory': '/projects/beta'})
+        self.state.configure({'project_directory': 'C:/Projects/Alpha'})
         old = self.state.snapshot()
         first = Mock(return_value=old)
         self.state.monitor.snapshot = first
@@ -273,7 +298,8 @@ class HttpTests(unittest.TestCase):
             self.assertFalse(json.loads(self.request('GET', '/api/usage')[2])['refreshing'])
         self.assertEqual(first.call_count, 1)
         updated = {**old, 'generated_at': '2026-02-02T00:00:00+00:00'}
-        scan, entered, release = self.blocked_scan(result=updated)
+        update = self.progress_update(updated, done=1, percent=25)
+        scan, entered, release = self.blocked_scan(result=updated, updates=[update])
         self.state.monitor.snapshot = scan
         status, _, body = self.request('GET', '/api/usage?refresh=1')
         self.assertEqual(status, 200)
@@ -281,7 +307,16 @@ class HttpTests(unittest.TestCase):
         self.assertTrue(cached['refreshing'])
         self.assertEqual(cached['generated_at'], old['generated_at'])
         self.assertTrue(entered.wait(1))
-        self.assertTrue(json.loads(self.request('GET', '/api/usage')[2])['refreshing'])
+        cached = json.loads(self.request('GET', '/api/usage')[2])
+        self.assertTrue(cached['refreshing'])
+        self.assertEqual(cached['progress'], update['progress'])
+        self.assertEqual(cached['totals'], old['totals'])
+        self.assertEqual(cached['tasks'], old['tasks'])
+        self.assertEqual(cached['daily'], old['daily'])
+        self.assertNotIn('partial_snapshot', cached)
+        status, _, csv = self.request('GET', '/api/export.csv')
+        self.assertEqual(status, 200)
+        self.assertEqual(csv, runtime.accounting.csv_bytes(old))
         self.assertEqual(scan.call_count, 1)
         release.set()
         self.assertEqual(self.poll_usage()['generated_at'], updated['generated_at'])
@@ -292,23 +327,152 @@ class HttpTests(unittest.TestCase):
         self.poll_usage()
         self.assertEqual(scan.call_count, 2)
 
-    def test_project_switch_discards_old_scan_without_starting_parallel_work(self):
+    def test_initial_progress_is_serializable_and_partial_snapshots_are_detached(self):
         self.state.configure({'project_directory': 'C:/Projects/Alpha'})
-        old = self.state.snapshot()
-        scan, entered, release = self.blocked_scan(result=old)
+        result = self.state.snapshot()
+        update = self.progress_update(result)
+        expected = json.loads(json.dumps(update))
+        scan, entered, release = self.blocked_scan(result=result, updates=[update])
         self.state.monitor.snapshot = scan
         self.assertEqual(self.request('GET', '/api/usage')[0], 202)
         self.assertTrue(entered.wait(1))
+        status, _, body = self.request('GET', '/api/usage')
+        self.assertEqual(status, 202)
+        loading = json.loads(body)
+        self.assertEqual(loading['progress'], expected['progress'])
+        self.assertEqual(loading['partial_snapshot'], expected['partial_snapshot'])
+        self.assertEqual(len(loading['partial_snapshot']['tasks']), 1)
+        self.assertNotIn('totals', loading)
+        self.assertEqual(self.request('GET', '/api/export.csv')[0], 503)
+        # Neither a scanner mutation nor a caller mutation can rewrite published state.
+        update['progress']['tasks_done'] = 999
+        update['partial_snapshot']['tasks'][0]['title'] = 'mutated scanner'
+        _, direct = self.state.usage_response()
+        direct['progress']['logs_done'] = 999
+        direct['partial_snapshot']['tasks'][0]['title'] = 'mutated caller'
+        unchanged = json.loads(self.request('GET', '/api/usage')[2])
+        self.assertEqual(unchanged['progress'], expected['progress'])
+        self.assertEqual(unchanged['partial_snapshot'], expected['partial_snapshot'])
+        # Progress reflects additional work only when a new callback arrives.
+        later = self.progress_update(result, done=1, percent=75)
+        scan.call_args.kwargs['progress'](later)
+        self.assertEqual(json.loads(self.request('GET', '/api/usage')[2])['progress']['percent'], 75)
+        release.set()
+        finished = self.poll_usage()
+        self.assertEqual(finished['tasks'], result['tasks'])
+        self.assertEqual(finished['totals'], result['totals'])
+        self.assertNotIn('partial_snapshot', finished)
+        self.assertIsNone(self.state.scan_partial)
+
+    def test_invalid_progress_and_failed_scan_clear_partial_data(self):
+        self.state.configure({'project_directory': 'C:/Projects/Alpha'})
+        result = self.state.snapshot()
+        for invalid in (b'not-json', float('nan')):
+            with self.subTest(invalid=invalid):
+                update = self.progress_update(result)
+                broken = self.progress_update(result)
+                broken['partial_snapshot']['tasks'][0]['model'] = invalid
+                scan, entered, release = self.blocked_scan(
+                    result=result, updates=[update], finish_updates=[broken])
+                self.state.monitor.snapshot = scan
+                self.assertEqual(self.request('GET', '/api/usage?refresh=1')[0], 202)
+                self.assertTrue(entered.wait(1))
+                self.assertIsNotNone(json.loads(self.request('GET', '/api/usage')[2])['partial_snapshot'])
+                release.set()
+                self.assert_scan_error(self.poll_usage(503), '暂时无法读取本地数据，请稍后重试。')
+                self.assertIsNone(self.state.scan_partial)
+                self.assertIsNone(self.state.scan_progress)
+                self.assertEqual(self.request('GET', '/api/export.csv')[0], 503)
+        scan, entered, release = self.blocked_scan(
+            error=runtime.accounting.MonitorError('日志格式不兼容'), updates=[self.progress_update(result)])
+        self.state.monitor.snapshot = scan
+        self.assertEqual(self.request('GET', '/api/usage?refresh=1')[0], 202)
+        self.assertTrue(entered.wait(1))
+        release.set()
+        self.assert_scan_error(self.poll_usage(503), '日志格式不兼容')
+
+    def test_empty_logs_and_empty_project_finish_at_one_hundred_percent(self):
+        self.state.configure({'project_directory': '/projects/beta'})
+        (self.home / 'other.jsonl').write_text('', encoding='utf-8')
+        self.assertEqual(self.request('GET', '/api/usage')[0], 202)
+        finished = self.poll_usage()
+        self.assertEqual(finished['totals']['total_tokens'], 0)
+        self.assertTrue(finished['incomplete'])
+        self.assertTrue(finished['tasks'][0]['own_unavailable'])
+        self.assertEqual(self.request('GET', '/api/export.csv')[0], 503)
+        self.assertEqual(finished['progress']['percent'], 100)
+        self.assertEqual(finished['progress']['tasks_done'], 1)
+        self.assertEqual(finished['progress']['logs_done'], finished['progress']['logs_total'])
+        with closing(sqlite3.connect(self.home / 'state_5.sqlite')) as conn:
+            conn.execute('DELETE FROM threads WHERE id = ?', ('other',))
+            conn.commit()
+        self.assertEqual(self.request('GET', '/api/usage?refresh=1')[0], 200)
+        empty = self.poll_usage()
+        self.assertEqual(empty['tasks'], [])
+        self.assertEqual(empty['totals']['total_tokens'], 0)
+        self.assertFalse(empty['incomplete'])
+        self.assertEqual(self.request('GET', '/api/export.csv')[0], 200)
+        self.assertEqual(empty['progress']['percent'], 100)
+        self.assertEqual(empty['progress']['tasks_done'], 0)
+        self.assertEqual(empty['progress']['tasks_total'], 0)
+
+    def test_legacy_tasks_keep_dashboard_available_with_explicit_incomplete_counts(self):
+        legacy = json.dumps({'type': 'event_msg', 'payload': {'type': 'token_count',
+                            'info': {'total_token_usage': {'total_tokens': 999999}}}}) + '\n'
+        (self.home / 'root.jsonl').write_text(legacy, encoding='utf-8')
+        self.state.configure({'project_directory': 'C:/Projects/Alpha'})
+        self.assertEqual(self.request('GET', '/api/usage')[0], 202)
+        data = self.poll_usage()
+        self.assertTrue(data['incomplete'])
+        self.assertEqual(data['progress']['percent'], 100)
+        self.assertEqual(len(data['tasks']), 2)
+        self.assertEqual(data['totals']['total_tokens'], 140)
+        root = next(task for task in data['tasks'] if task['id'] == 'root')
+        self.assertTrue(root['own_unavailable'])
+        self.assertFalse(root['children_unavailable'])
+        self.assertEqual(root['children']['total_tokens'], 70)
+        self.assertEqual(root['unavailable_logs'], 1)
+        status, _, body = self.request('GET', '/api/export.csv')
+        self.assertEqual(status, 503)
+        self.assertIn('统计不完整', json.loads(body)['error'])
+        # A project consisting entirely of legacy logs still renders its task and status.
+        (self.home / 'other.jsonl').write_text(legacy, encoding='utf-8')
+        self.state.configure({'project_directory': '/projects/beta'})
+        self.assertEqual(self.request('GET', '/api/usage')[0], 202)
+        unavailable = self.poll_usage()
+        self.assertTrue(unavailable['incomplete'])
+        self.assertEqual(unavailable['progress']['percent'], 100)
+        self.assertEqual(len(unavailable['tasks']), 1)
+        self.assertTrue(unavailable['tasks'][0]['own_unavailable'])
+        self.assertEqual(unavailable['tasks'][0]['unavailable_logs'], 1)
+        self.assertEqual(unavailable['totals']['total_tokens'], 0)
+        self.assertEqual(self.request('GET', '/api/export.csv')[0], 503)
+
+    def test_project_switch_discards_old_scan_without_starting_parallel_work(self):
+        self.state.configure({'project_directory': 'C:/Projects/Alpha'})
+        old = self.state.snapshot()
+        update = self.progress_update(old)
+        scan, entered, release = self.blocked_scan(result=old, updates=[update])
+        self.state.monitor.snapshot = scan
+        self.assertEqual(self.request('GET', '/api/usage')[0], 202)
+        self.assertTrue(entered.wait(1))
+        self.assertEqual(json.loads(self.request('GET', '/api/usage')[2])['progress'], update['progress'])
         start = time.monotonic()
         self.assertEqual(self.post({'project_directory': '/projects/beta'})[0], 200)
         self.assertLess(time.monotonic() - start, 1)
         new_monitor = self.state.monitor
         current_scan = Mock(wraps=new_monitor.snapshot)
         new_monitor.snapshot = current_scan
+        # A callback arriving after selection changed must be ignored as well as its final result.
+        scan.call_args.kwargs['progress'](update)
         for _ in range(3):
             status, _, body = self.request('GET', '/api/usage')
             self.assertEqual(status, 202)
             self.assertEqual(json.loads(body)['project_name'], 'beta')
+            self.assertEqual(json.loads(body)['project_directory'], '/projects/beta')
+            self.assertEqual(json.loads(body)['source_home'], str(self.home.resolve()))
+            self.assertIsNone(json.loads(body)['progress'])
+            self.assertIsNone(json.loads(body)['partial_snapshot'])
             self.assertNotIn('totals', json.loads(body))
         current_scan.assert_not_called()
         release.set()
@@ -326,7 +490,7 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(self.request('GET', '/api/usage')[0], 202)
         self.assertTrue(entered.wait(1))
         release.set()
-        self.assertEqual(self.poll_usage(503), {'error': '旧版日志不兼容'})
+        self.assert_scan_error(self.poll_usage(503), '旧版日志不兼容')
         for _ in range(3):
             self.assertEqual(self.request('GET', '/api/usage')[0], 503)
         self.assertEqual(scan.call_count, 1)
@@ -341,9 +505,9 @@ class HttpTests(unittest.TestCase):
             conn.commit()
         self.state.configure({'project_directory': 'C:/Projects/Alpha'})
         self.assertEqual(self.request('GET', '/api/usage')[0], 202)
-        self.assertEqual(self.poll_usage(503), {'error': '暂时无法读取本地数据，请稍后重试。'})
+        self.assert_scan_error(self.poll_usage(503), '暂时无法读取本地数据，请稍后重试。')
         self.assertEqual(self.request('GET', '/api/usage?refresh=1')[0], 202)
-        self.assertEqual(self.poll_usage(503), {'error': '暂时无法读取本地数据，请稍后重试。'})
+        self.assert_scan_error(self.poll_usage(503), '暂时无法读取本地数据，请稍后重试。')
         self.assertEqual(self.request('GET', '/api/health')[0], 200)
         self.assertEqual(self.request('GET', '/api/setup')[0], 200)
 
@@ -448,7 +612,7 @@ class HttpTests(unittest.TestCase):
                 opener.return_value.open.return_value.__enter__.return_value = io.BytesIO(json.dumps(invalid).encode())
                 self.assertIsNone(runtime.existing_url(self.data))
         health = json.loads(self.request('GET', '/api/health')[2])
-        self.assertEqual(health['version'], '0.2.1')
+        self.assertEqual(health['version'], '0.2.2')
 
     def test_quit_replies_before_stopping_own_server(self):
         self.assertEqual(self.post({}, route='/api/quit')[0], 200)
@@ -474,7 +638,7 @@ class LifecycleTests(unittest.TestCase):
                     time.sleep(0.05)
                 self.assertTrue(metadata.is_file())
                 saved = json.loads(metadata.read_text(encoding='utf-8'))
-                self.assertEqual(saved['version'], '0.2.1')
+                self.assertEqual(saved['version'], '0.2.2')
                 repeat = subprocess.run(command, capture_output=True, timeout=8)
                 self.assertEqual(repeat.returncode, 0, repeat.stderr.decode(errors='replace'))
                 self.assertEqual(json.loads(metadata.read_text(encoding='utf-8')), saved)

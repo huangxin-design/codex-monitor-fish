@@ -13,7 +13,7 @@
     .hero{isolation:isolate;position:relative;display:grid;grid-template-columns:55% 45%;align-items:center;min-height:326px;padding:32px 38px;overflow:hidden;gap:0;margin-bottom:22px;border:1px solid #ffffff12;border-radius:22px;background:radial-gradient(ellipse at 90% 105%,#a70b251f,transparent 57%),linear-gradient(110deg,#141013 10%,#100c0e 70%,#160c10);box-shadow:inset 0 1px #ffffff05,var(--shadow)}.hero:before{content:"";position:absolute;z-index:-1;inset:0;pointer-events:none;background-image:radial-gradient(#9c546950 .65px,transparent .9px);background-size:6px 6px;mask-image:linear-gradient(100deg,transparent 34%,#0005 85%)}.hero:after{content:"";position:absolute;bottom:-1px;left:34%;right:4%;height:1px;background:linear-gradient(90deg,transparent,#e02a4590,#ff768080,transparent);box-shadow:0 0 24px 5px #cf17372a;pointer-events:none}.hero-copy{position:relative;z-index:2;flex:1;min-width:0}.eyebrow{display:inline-flex;align-items:center;gap:7px;margin:0 0 14px;color:#dcb9c0;font-size:11px;font-weight:500;letter-spacing:.12em;padding:4px 9px;border:1px solid #dc7e921f;border-radius:30px;background:#ffffff03}.eyebrow:before{content:"";width:4px;height:4px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px #ff4555}h1{margin:0;font-size:clamp(34px,3.7vw,50px);letter-spacing:-.055em;line-height:1.25;font-weight:650}.intro{margin:13px 0 0;color:#aea2a8;font-size:12px;line-height:1.9}.hero-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:26px}.button{border:1px solid #ffffff18;border-radius:30px;background:linear-gradient(180deg,#ffffff07,#ffffff02);padding:9px 15px;display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;font-size:12px;min-height:39px;box-shadow:inset 0 1px #ffffff06;transition:background .18s,border-color .18s,box-shadow .18s}.button:hover{background:#ffffff0d;border-color:#ffffff30}.button.primary{background:linear-gradient(180deg,#e51b32,#b6041b);border-color:#f5475b87;color:#fff;box-shadow:inset 0 1px #ffb9c459,0 4px 18px #d006262b}.button.primary:hover{background:linear-gradient(180deg,#ef3045,#cd0a24);box-shadow:inset 0 1px #ffc5cf70,0 4px 23px #d0062644}.hero-art{width:calc(100% + 38px);height:280px;margin-left:-38px;position:relative;align-self:center;pointer-events:none}.hero-art svg{width:100%;height:100%;overflow:visible}.orb-depth{transform:translate(var(--pointer-x,0px),var(--pointer-y,0px))}.mesh-depth{transform:translate(calc(var(--pointer-x,0px) * -.4),calc(var(--pointer-y,0px) * -.4))}.orbit-drift{transform-origin:184px 114px;animation:orbit-drift 18s ease-in-out infinite alternate}.orbit-point{offset-path:path("M51 114 A133 46 0 1 0 317 114 A133 46 0 1 0 51 114");offset-rotate:0deg;animation:orbit-travel 32s linear infinite}.orbit-point.secondary{animation-duration:42s;animation-delay:-18s}.motion-paused .orbit-drift,.motion-paused .orbit-point{animation-play-state:paused}@keyframes orbit-drift{from{transform:rotate(-5deg)}to{transform:rotate(7deg)}}@keyframes orbit-travel{to{offset-distance:100%}}.art-caption{position:absolute;bottom:-3px;left:0;width:100%;max-width:405px;text-align:center;font-size:11px;letter-spacing:.22em;color:#9f6b77}.error{background:#3b101c;border:1px solid #9c354b70;border-radius:12px;color:#ffd6dc;padding:12px 16px;font-size:13px;margin-bottom:18px}
     .scope-explainer{margin:0 0 24px;padding:0 2px;color:var(--muted);font-size:12px}.scope-explainer summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;width:fit-content;max-width:100%;font-size:12px}.scope-explainer summary::-webkit-details-marker{display:none}.scope-explainer summary svg{width:15px;height:15px;flex-shrink:0;color:#bd8d98}.scope-explainer strong{font-weight:500;color:#cdb8c0}.scope-hint{color:#8f838a;font-size:11px;margin-left:3px;display:flex;align-items:center;gap:6px;white-space:nowrap}.scope-hint:after{content:"⌄";font-size:15px;line-height:1;transition:transform .2s}.scope-explainer[open] .scope-hint:after{transform:rotate(180deg)}.scope-body{padding:11px 15px;margin-top:10px;border:1px solid #ffffff0d;border-radius:10px;background:#ffffff02;line-height:1.9}.scope-body p{margin:3px 0}.scope-explainer a{color:#df97a4}
     .metrics{display:grid;grid-template-columns:1.16fr 1fr 1fr 1fr;gap:13px;margin-bottom:27px}.metric{position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(135deg,#171316,#111011);border:1px solid #ffffff11;border-radius:16px;padding:22px 23px 20px;box-shadow:inset 0 1px #ffffff03,var(--shadow);min-width:0}.metric:nth-child(2){background:linear-gradient(135deg,#1b171b,#121014)}.metric:nth-child(3){background:linear-gradient(135deg,#1c141c,#120f15)}.metric:nth-child(4){background:linear-gradient(135deg,#1b1517,#130f11)}.metric.total{background:radial-gradient(ellipse at 100% -30%,#b5103747,transparent 64%),linear-gradient(120deg,#231117,#180e12);border-color:#af35434d}.metric.total:after{content:"";z-index:-1;position:absolute;right:-40px;bottom:-80px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,#d4142f22,transparent 66%)}.metric.total:before{content:"";position:absolute;top:-1px;left:20px;right:20px;height:1px;background:linear-gradient(90deg,transparent,#f5687b9c,transparent)}.metric-label{font-size:12px;color:#b7a9b0;display:flex;justify-content:space-between;align-items:center;gap:8px}.metric.total .metric-label{color:#e4c6cf}.metric-icon{width:26px;height:26px;border:1px solid #ffffff0e;border-radius:8px;background:#ffffff03;display:grid;place-items:center;color:#bba3ad;font-size:17px}.metric-icon svg{width:14px;height:14px}.metric.total .metric-icon{background:#be203521;border-color:#e6354826;color:#ff8e9b}.metric-value{font-size:clamp(24px,2.9vw,41px);font-weight:580;font-variant-numeric:tabular-nums;letter-spacing:-.055em;line-height:1.15;margin:19px 0 6px;overflow-wrap:anywhere;color:#f7eff2}.metric.total .metric-value{color:#ff8190}.metric-unit{font-size:11px;font-weight:400;letter-spacing:.12em;color:#b3a5ad}.metric-note{font-size:11px;line-height:1.7;color:#a89ca3;margin-top:19px;min-height:19px;overflow-wrap:anywhere}.metric.total .metric-note{color:#c3a8b2}
-    .workspace{border:1px solid #ffffff13;border-radius:18px;background:#121012;box-shadow:inset 0 1px #ffffff04,var(--shadow);overflow:hidden}.table-toolbar{padding:23px 25px;display:flex;justify-content:space-between;align-items:center;gap:18px}.section-heading{display:flex;align-items:center;gap:10px}.section-heading:before{content:"";width:3px;height:15px;border-radius:3px;background:#da263d;box-shadow:0 0 11px #bb17374d}.section-heading h2{font-size:16px;font-weight:600;margin:0;letter-spacing:-.02em}.badge{background:#ffffff05;border:1px solid #ffffff0c;color:#afa1a9;font-size:11px;padding:2px 8px;border-radius:30px;white-space:nowrap}.table-controls{display:flex;align-items:center;gap:18px;flex-wrap:wrap}.toggle-label{display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;white-space:nowrap;color:#c9bec4}.toggle-label input{appearance:none;margin:0;width:30px;height:18px;background:#494047;border:1px solid #ffffff12;border-radius:20px;cursor:pointer;position:relative;transition:background .15s;flex-shrink:0}.toggle-label input:after{content:"";width:12px;height:12px;border-radius:50%;background:#f6e7ed;position:absolute;top:2px;left:2px;box-shadow:0 1px 3px #0004;transition:left .15s}.toggle-label input:checked{background:#be1531;border-color:#d73b5470}.toggle-label input:checked:after{left:14px}.sort-label{display:flex;gap:7px;align-items:center;color:#a799a2;font-size:11px;white-space:nowrap}.sort-label select{font-size:11px;border:1px solid #ffffff12;border-radius:7px;background:#1a1619;padding:6px 8px;max-width:140px;min-height:31px}.table-wrap{overflow-x:auto;scrollbar-color:#4c2835 #171115;scrollbar-width:thin}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:14px;min-width:930px}col.name-col{width:27%}col.model-col{width:13%}col.num-col{width:11%}col.total-col{width:13%}col.time-col{width:14%}thead{background:#ffffff04}th{font-weight:400;color:#9f909a;font-size:12px;padding:14px 16px;text-align:right;white-space:nowrap;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}th:first-child{text-align:left;padding-left:25px}th.model{text-align:left}td{padding:23px 16px;border-bottom:1px solid #ffffff09;text-align:right;vertical-align:middle;font-variant-numeric:tabular-nums}tbody tr:last-child td{border-bottom:0}td:first-child{text-align:left;padding-left:25px}tr.task-row{background:#0e0c0f;transition:background .15s}tr.task-row:nth-of-type(4n+3){background:#110e12}tr.task-row:hover,tr.task-row.is-expanded{background:#20121a}.task-title-button{border:0;padding:0;background:transparent;display:flex;align-items:flex-start;gap:10px;text-align:left;width:100%;color:var(--ink)}.task-index{font-size:11px;line-height:22px;color:#826c78;min-width:16px;font-variant-numeric:tabular-nums}.chevron{width:12px;height:12px;flex-shrink:0;margin-top:5px;color:#9e7485;transition:transform .15s}.task-title-button[aria-expanded="true"] .chevron{transform:rotate(90deg);color:var(--accent)}.task-title{font-size:14px;font-weight:600;line-height:1.65;overflow-wrap:anywhere}.task-meta{display:block;color:#a2949c;font-size:12px;font-weight:400;margin-top:5px;line-height:1.6}.model-cell{text-align:left;color:#b5a4ae;font-size:12px;overflow-wrap:anywhere}.model-chip{display:inline-block;border:1px solid #ffffff0f;background:#ffffff03;border-radius:5px;padding:3px 6px;max-width:100%;overflow-wrap:anywhere}.numeric{white-space:nowrap;color:#d1c5cd;font-size:14px}.total-cell{color:#f78598;font-weight:600}.time-cell{color:#a99aa4;font-size:12px;line-height:1.8;white-space:nowrap}.detail-row td{padding:0 25px 22px;background:#09080b;text-align:left}.detail-content{padding-top:18px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.detail-card{border:1px solid #c26a891f;border-radius:10px;padding:14px 16px;background:linear-gradient(130deg,#21151e,#161017)}.detail-card h3{font-size:13px;margin:0 0 11px;font-weight:500;color:#e1cdd8}.detail-card dl{margin:0}.detail-card dl div{display:flex;justify-content:space-between;gap:10px;margin:7px 0;font-size:12px}.detail-card dt{color:#a08e9b}.detail-card dd{margin:0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;text-align:right}.detail-card .detail-total{border-top:1px solid #ffffff0e;padding-top:9px;margin-top:9px;font-weight:600;color:#f78da1}.detail-card .detail-total dt{color:#c492a4}.detail-metadata{grid-column:1/-1;color:#a4919f;font-size:12px;overflow-wrap:anywhere;line-height:1.8}.task-alias{margin:0 0 7px;color:#c5b2bf}.task-warning{color:#ef9dad;font-size:11px;margin:7px 0 0}.empty{padding:48px;text-align:center!important;color:var(--muted)}.table-footer{padding:15px 25px;color:#a08f9b;font-size:11px;display:flex;gap:12px;justify-content:space-between;border-top:1px solid var(--line);background:#ffffff03}.table-footer strong{font-weight:400;color:#c29dad}
+    .workspace{border:1px solid #ffffff13;border-radius:18px;background:#121012;box-shadow:inset 0 1px #ffffff04,var(--shadow);overflow:hidden}.table-toolbar{padding:23px 25px;display:flex;justify-content:space-between;align-items:center;gap:18px}.section-heading{display:flex;align-items:center;gap:10px}.section-heading:before{content:"";width:3px;height:15px;border-radius:3px;background:#da263d;box-shadow:0 0 11px #bb17374d}.section-heading h2{font-size:16px;font-weight:600;margin:0;letter-spacing:-.02em}.badge{background:#ffffff05;border:1px solid #ffffff0c;color:#afa1a9;font-size:11px;padding:2px 8px;border-radius:30px;white-space:nowrap}.table-controls{display:flex;align-items:center;gap:18px;flex-wrap:wrap}.toggle-label{display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;white-space:nowrap;color:#c9bec4}.toggle-label input{appearance:none;margin:0;width:30px;height:18px;background:#494047;border:1px solid #ffffff12;border-radius:20px;cursor:pointer;position:relative;transition:background .15s;flex-shrink:0}.toggle-label input:after{content:"";width:12px;height:12px;border-radius:50%;background:#f6e7ed;position:absolute;top:2px;left:2px;box-shadow:0 1px 3px #0004;transition:left .15s}.toggle-label input:checked{background:#be1531;border-color:#d73b5470}.toggle-label input:checked:after{left:14px}.sort-label{display:flex;gap:7px;align-items:center;color:#a799a2;font-size:11px;white-space:nowrap}.sort-label select{font-size:11px;border:1px solid #ffffff12;border-radius:7px;background:#1a1619;padding:6px 8px;max-width:140px;min-height:31px}.table-wrap{overflow-x:auto;scrollbar-color:#4c2835 #171115;scrollbar-width:thin}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:14px;min-width:930px}col.name-col{width:27%}col.model-col{width:13%}col.num-col{width:11%}col.total-col{width:13%}col.time-col{width:14%}thead{background:#ffffff04}th{font-weight:400;color:#9f909a;font-size:12px;padding:14px 16px;text-align:right;white-space:nowrap;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}th:first-child{text-align:left;padding-left:25px}th.model{text-align:left}td{padding:23px 16px;border-bottom:1px solid #ffffff09;text-align:right;vertical-align:middle;font-variant-numeric:tabular-nums}tbody tr:last-child td{border-bottom:0}td:first-child{text-align:left;padding-left:25px}tr.task-row{background:#0e0c0f;transition:background .15s}tr.task-row:nth-of-type(4n+3){background:#110e12}tr.task-row:hover,tr.task-row.is-expanded{background:#20121a}.task-title-button{border:0;padding:0;background:transparent;display:flex;align-items:flex-start;gap:10px;text-align:left;width:100%;color:var(--ink)}.task-index{font-size:11px;line-height:22px;color:#826c78;min-width:16px;font-variant-numeric:tabular-nums}.chevron{width:12px;height:12px;flex-shrink:0;margin-top:5px;color:#9e7485;transition:transform .15s}.task-title-button[aria-expanded="true"] .chevron{transform:rotate(90deg);color:var(--accent)}.task-title{font-size:14px;font-weight:600;line-height:1.65;overflow-wrap:anywhere}.task-meta{display:block;color:#a2949c;font-size:12px;font-weight:400;margin-top:5px;line-height:1.6}.model-cell{text-align:left;color:#b5a4ae;font-size:12px;overflow-wrap:anywhere}.model-chip{display:inline-block;border:1px solid #ffffff0f;background:#ffffff03;border-radius:5px;padding:3px 6px;max-width:100%;overflow-wrap:anywhere}.numeric{white-space:nowrap;color:#d1c5cd;font-size:14px}.total-cell{color:#f78598;font-weight:600}.time-cell{color:#a99aa4;font-size:12px;line-height:1.8;white-space:nowrap}.detail-row td{padding:0 25px 22px;background:#09080b;text-align:left}.detail-content{padding-top:18px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.detail-card{border:1px solid #c26a891f;border-radius:10px;padding:14px 16px;background:linear-gradient(130deg,#21151e,#161017)}.detail-card h3{font-size:13px;margin:0 0 11px;font-weight:500;color:#e1cdd8}.detail-card dl{margin:0}.detail-card dl div{display:flex;justify-content:space-between;gap:10px;margin:7px 0;font-size:12px}.detail-card dt{color:#a08e9b}.detail-card dd{margin:0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;text-align:right}.detail-card .detail-total{border-top:1px solid #ffffff0e;padding-top:9px;margin-top:9px;font-weight:600;color:#f78da1}.detail-card .detail-total dt{color:#c492a4}.detail-metadata{grid-column:1/-1;color:#a4919f;font-size:12px;overflow-wrap:anywhere;line-height:1.8}.task-alias{margin:0 0 7px;color:#c5b2bf}.task-warning{display:block;font-weight:400;color:#ef9dad;font-size:11px;margin:7px 0 0}.empty{padding:48px;text-align:center!important;color:var(--muted)}.table-footer{padding:15px 25px;color:#a08f9b;font-size:11px;display:flex;gap:12px;justify-content:space-between;border-top:1px solid var(--line);background:#ffffff03}.table-footer strong{font-weight:400;color:#c29dad}
     .lower-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}.panel{padding:23px 25px;border:1px solid #ffffff0e;border-radius:16px;background:linear-gradient(135deg,#141114,#100e10);min-width:0}.panel h2{margin:0;font-size:13px;font-weight:500;letter-spacing:-.01em}.panel-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.panel-kicker{font-size:11px;letter-spacing:.08em;color:#9b7d8c}.panel-subtitle{font-size:11px;color:#a08e9a;margin:6px 0 0;line-height:1.8}.daily-chart{height:126px;display:flex;align-items:stretch;gap:8px;margin-top:20px}.day{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;min-width:0}.day-bar-wrap{flex:1;display:flex;align-items:flex-end;background:linear-gradient(to top,#54152a19,transparent);border-bottom:1px solid #ffffff0d;border-radius:4px}.day-bar{width:100%;height:var(--height);min-height:2px;background:linear-gradient(to top,#59132a,#bb3856);border:1px solid #ff799321;border-radius:5px 5px 0 0;box-shadow:inset 0 1px #ffadc43d}.day:last-child .day-bar{background:linear-gradient(to top,#91192e,#ee5269);box-shadow:inset 0 1px #ffa2b47a,0 0 18px #df28551f}.day-label{font-size:11px;text-align:center;color:#a38a9a;white-space:nowrap}.method-list{padding-left:17px;margin:16px 0 0;color:#ac99a7;font-size:11px;line-height:1.85}.method-list li{margin:8px 0;padding-left:3px}.method-list li::marker{color:#8e3850}.notes{margin-top:22px;color:#978793;font-size:11px;line-height:1.9}.notes p{margin:4px 0}.source{overflow-wrap:anywhere;color:#85767f}.page-footer{display:flex;justify-content:space-between;gap:15px;color:#93828e;font-size:11px;letter-spacing:.035em;margin:23px 0 0;padding-top:18px;border-top:1px solid #ffffff0a}.page-footer-brand{display:flex;align-items:center;gap:7px}.footer-dot{width:4px;height:4px;border-radius:50%;background:#ad2945}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}[hidden]{display:none!important}
     @media(min-width:1500px){main{padding-top:32px}.hero{min-height:312px}.metric{padding:25px 27px}.metric-value{margin-top:24px}td{padding-top:22px;padding-bottom:22px}}
     @media(max-width:1200px){main{padding:25px 28px}.local-tag{display:none}.hero{padding:30px}.hero-art{width:calc(100% + 24px);height:256px;margin-left:-24px}.metric{padding:20px}.table-toolbar{align-items:flex-start}.table-controls{gap:10px}.metrics{gap:11px}.metric-note{font-size:11px}.profile-copy{display:none}.profile{padding-left:16px}}
@@ -21,7 +21,7 @@
     @media(max-width:650px){main{padding:20px 16px}.topbar{grid-template-columns:1fr auto;gap:12px;margin-bottom:18px;padding-bottom:17px}.brand{font-size:14px}.brandmark{width:31px;height:31px;border-radius:9px}.profile{grid-column:2;grid-row:1;border:0;padding:0}.avatar-wrap img{width:30px;height:30px}.status{grid-column:1/-1;grid-row:2;font-size:11px;margin-left:3px;gap:9px}.hero{display:block;min-height:286px;padding:25px 23px 27px;border-radius:17px;margin-bottom:16px}.hero-copy{max-width:100%}.hero-art{position:absolute;z-index:-1;right:-56px;top:-21px;width:225px;height:200px;margin-left:0;opacity:.44}.hero:before{mask-image:linear-gradient(120deg,transparent,#0003)}.art-caption{display:none}.eyebrow{font-size:11px;margin-bottom:17px;padding:4px 8px}h1{font-size:34px;letter-spacing:-.055em}.intro{font-size:11px;margin-top:12px;max-width:235px;color:#c2aeb9;line-height:1.9}.hero-actions{gap:7px;margin-top:23px}.button{font-size:11px;padding:8px 11px;gap:5px;min-height:37px}.button svg{width:14px;height:14px}.scope-explainer{margin-bottom:19px;padding:0 3px}.scope-explainer summary{gap:7px;font-size:11px;align-items:flex-start;line-height:1.8}.scope-explainer summary svg{margin-top:2px;width:13px;height:13px}.scope-hint{font-size:11px;margin-left:auto;gap:3px}.scope-body{font-size:11px;padding:10px 12px}.metrics{gap:10px;margin-bottom:19px}.metric{padding:17px 16px;border-radius:13px}.metric-label{font-size:11px;gap:4px}.metric-icon{width:22px;height:22px;font-size:14px;border-radius:6px}.metric-value{font-size:30px;margin-top:17px;letter-spacing:-.06em}.metric-unit{font-size:11px}.metric-note{font-size:11px;margin-top:13px;min-height:34px;line-height:1.7}.table-toolbar{padding:18px 16px;gap:15px}.section-heading h2{font-size:15px}.table-controls{display:grid;grid-template-columns:1fr auto;gap:13px 12px;width:100%}.toggle-label{font-size:11px;grid-column:1/-1}.sort-label{font-size:11px;justify-content:flex-start;gap:7px}.sort-label:last-child{justify-content:flex-end}.sort-label select{font-size:11px;padding:5px 6px;max-width:120px}.badge{font-size:11px}.task-row{gap:12px 11px;margin:0 11px 11px;padding:15px 13px}.task-index{display:none}.task-title-button{gap:8px}.task-title{font-size:14px;line-height:1.65}.task-meta{font-size:12px;line-height:1.6;margin-top:5px}.chevron{width:10px;height:10px;margin-top:6px}.model-cell{padding-left:18px;margin-top:-4px}.numeric{font-size:13px}.numeric:before{font-size:11px;margin-bottom:3px}.total-cell{font-size:15px;line-height:1.6;letter-spacing:-.045em}.total-cell:before{font-size:11px}.time-cell{font-size:11px;padding-top:8px}.detail-row{margin:-4px 11px 11px}.detail-content{grid-template-columns:1fr;padding:10px;gap:10px}.detail-card{padding:13px 14px}.detail-card dl div{font-size:11px}.detail-metadata{font-size:11px}.table-footer{padding:13px 16px;font-size:11px;gap:6px}.lower-grid{grid-template-columns:1fr;gap:14px;margin-top:16px}.panel{padding:20px}.daily-chart{height:125px;gap:6px}.day-label{font-size:11px}.panel-subtitle{font-size:11px}.panel-kicker{font-size:11px}.method-list{font-size:11px}.notes{margin-top:18px;font-size:11px}.page-footer{display:block;margin-top:19px;font-size:11px;line-height:1.9}.page-footer>span{display:flex;margin:4px 0}.source{font-size:11px}}
     @media(max-width:360px){main{padding:16px 12px}.hero{padding:23px 17px}h1{font-size:30px}.button{padding:8px 9px;font-size:11px}.metric{padding:15px 12px}.metric-value{font-size:26px}.scope-hint{font-size:0}.scope-hint:after{font-size:13px}.table-controls{gap:12px 8px}.sort-label{gap:5px}.total-cell{font-size:13px}}
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}.orb-depth,.mesh-depth{transform:none}}
-.loading{margin:0 0 22px;padding:13px 17px;border:1px solid #ffffff16;border-radius:12px;background:#1b1418;color:#c6adb9;font-size:13px;line-height:1.8}
+.loading{margin:0 0 22px;padding:20px 23px;border:1px solid #a8374f55;border-radius:15px;background:linear-gradient(115deg,#26141c,#161215);color:#c6adb9;font-size:13px;line-height:1.8}.loading-heading{display:flex;align-items:center;gap:12px}.loading-heading strong{font-size:14px;font-weight:550;color:#f1dce4}.loading-percent{margin-left:auto;color:#ff8ca2;font-size:20px;font-weight:550;font-variant-numeric:tabular-nums}.loading-track{height:6px;overflow:hidden;border-radius:9px;background:#ffffff0b;margin:12px 0 9px}.loading-fill{display:block;height:100%;width:0;background:linear-gradient(90deg,#b30c2f,#ff758f);border-radius:inherit;transition:width .45s ease}.loading-track.is-indeterminate .loading-fill{width:30%;animation:loading-sweep 1.5s ease-in-out infinite}.loading-counts{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:#c8abb9;font-size:12px;font-variant-numeric:tabular-nums}.loading-current{margin:9px 0 0;overflow-wrap:anywhere;color:#ead4de}.loading-note{margin:3px 0 0;color:#a58b99;font-size:12px}@keyframes loading-sweep{from{transform:translateX(-110%)}to{transform:translateX(440%)}}@media(prefers-reduced-motion:reduce){.loading-fill{transition:none}.loading-track.is-indeterminate .loading-fill{animation:none;opacity:.6}}@media(max-width:640px){.loading{padding:16px}.loading-heading strong{font-size:13px}.loading-percent{font-size:17px}}
 </style>
 </head>
 <body>
@@ -59,7 +59,12 @@
       <span class="art-caption">EVERY TOKEN, A TRACE.</span>
     </div>
   </section>
-  <div class="loading" id="loading" role="status" hidden></div>
+  <section class="loading" id="loading" aria-labelledby="loading-title" hidden>
+    <div class="loading-heading"><strong id="loading-title">正在读取历史记录</strong><span class="loading-percent" id="loading-percent">准备中</span></div>
+    <div class="loading-track is-indeterminate" id="loading-track" role="progressbar" aria-label="记录读取进度" aria-valuemin="0" aria-valuemax="100"><span class="loading-fill" id="loading-fill"></span></div>
+    <div class="loading-counts"><span id="loading-records">正在查找项目记录…</span><span id="loading-tasks"></span></div>
+    <p class="loading-current" id="loading-current"></p><p class="loading-note" id="loading-note">读完一个任务就显示一个，无需反复刷新。</p>
+  </section>
   <div class="error" id="error" role="alert" hidden></div>
   <details class="scope-explainer" aria-label="项目处理量与账户额度的区别">
     <summary><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 7v4m0-7v1"/></svg><strong>项目历史处理量 ≠ 账户额度消耗比例</strong><span class="scope-hint">统计说明</span></summary>
@@ -67,7 +72,7 @@
     <p>Codex 的“使用情况”显示账户在当前额度窗口内的剩余比例。模型、上下文、推理、工具使用和缓存都会影响额度消耗，不能按这里的 Token 总量换算百分比。<a href="https://learn.chatgpt.com/docs/pricing#what-are-the-usage-limits-for-my-plan" target="_blank" rel="noopener noreferrer">官方说明</a></p></div>
   </details>
   <section class="metrics" aria-label="用量概览">
-    <article class="metric total"><div class="metric-label">项目累计处理量<span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 11 6 8l3 2 4-6M10 4h3v3"/></svg></span></div><div class="metric-value" id="total-value">—</div><div class="metric-unit">TOKENS</div><div class="metric-note" id="total-note">全部历史 · 输入 + 输出</div></article>
+    <article class="metric total"><div class="metric-label"><span id="total-label">项目累计处理量</span><span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 11 6 8l3 2 4-6M10 4h3v3"/></svg></span></div><div class="metric-value" id="total-value">—</div><div class="metric-unit">TOKENS</div><div class="metric-note" id="total-note">全部历史 · 输入 + 输出</div></article>
     <article class="metric"><div class="metric-label">未缓存输入<span class="metric-icon" aria-hidden="true">↗</span></div><div class="metric-value" id="input-value">—</div><div class="metric-unit">TOKENS</div><div class="metric-note">输入 token 扣除缓存部分</div></article>
     <article class="metric"><div class="metric-label">缓存输入<span class="metric-icon" aria-hidden="true">◫</span></div><div class="metric-value" id="cached-value">—</div><div class="metric-unit">TOKENS</div><div class="metric-note" id="cache-note">缓存是输入的一部分</div></article>
     <article class="metric"><div class="metric-label">输出<span class="metric-icon" aria-hidden="true">↙</span></div><div class="metric-value" id="output-value">—</div><div class="metric-unit">TOKENS</div><div class="metric-note" id="reasoning-note">包含推理 token</div></article>
@@ -92,6 +97,7 @@ const numberFormat = new Intl.NumberFormat('zh-CN');
 const yiFormat = new Intl.NumberFormat('zh-CN', {maximumFractionDigits:4});
 const expanded = new Set();
 let data = null, paused = false, busy = false, timer = null, refreshSeconds = 10;
+let loadingSince = 0, progressHideTimer = null;
 const format = value => numberFormat.format(Number(value) || 0);
 const formatToken = (value, suffix = true) => {
   const number = Number(value) || 0;
@@ -197,13 +203,27 @@ function setStatus(text, state = '') {
   $('status-text').textContent = text;
   $('status').dataset.state = state;
 }
-function detailCard(title, usage) {
+function selectedUnavailable(task) {
+  return task.own_unavailable || $('include-children').checked && task.children_unavailable;
+}
+function confirmedToken(value, suffix = true) {
+  return $('unit').value === 'raw' ? format(value) : (value / 100000000).toLocaleString('zh-CN',{maximumFractionDigits:8}) + (suffix ? ' 亿' : '');
+}
+function usageNode(tag, className, value, unavailable) {
+  const node = tokenNode(tag,className,value);
+  if (unavailable) {
+    node.textContent = value ? '≥ ' + confirmedToken(value) : '—';
+    node.title = value ? '已确认 ' + format(value) + ' Token，另有记录无法准确统计' : '记录无法准确统计，不代表没有消耗';
+  }
+  return node;
+}
+function detailCard(title, usage, unavailable = false) {
   const card = el('div', 'detail-card');
   card.append(el('h3', '', title));
   const list = el('dl');
   for (const [key, label] of [['input_tokens','输入'],['cached_input_tokens','其中缓存'],['output_tokens','输出'],['reasoning_output_tokens','其中推理'],['total_tokens','合计']]) {
     const row = el('div', key === 'total_tokens' ? 'detail-total' : '');
-    row.append(el('dt', '', label), tokenNode('dd', '', amount(usage,key)));
+    row.append(el('dt', '', label), usageNode('dd', '', amount(usage,key),unavailable));
     list.append(row);
   }
   card.append(list);
@@ -212,6 +232,7 @@ function detailCard(title, usage) {
 function taskRows(task, index) {
   const usage = selectedUsage(task);
   const row = el('tr', 'task-row' + (expanded.has(task.id) ? ' is-expanded' : ''));
+  row.dataset.taskId = String(task.id);
   const nameCell = el('td','name-cell');
   const titleButton = el('button', 'task-title-button');
   titleButton.type = 'button';
@@ -225,10 +246,11 @@ function taskRows(task, index) {
   const title = el('span','task-title',task.title || task.screenshot_title || '未命名任务');
   const childCount = Number(task.child_count) || 0;
   title.append(el('span','task-meta',(task.archived ? '已归档 · ' : '') + (childCount ? childCount + ' 个子任务' : '独立任务')));
+  if (task.unavailable_logs) title.append(el('span','task-warning','部分记录无法准确统计 · 点击查看原因'));
   titleButton.append(el('span','task-index',String(index + 1).padStart(2,'0')),arrow,title); nameCell.append(titleButton); row.append(nameCell);
   const model = el('td','model-cell'); model.append(el('span','model-chip',task.model || '未记录')); row.append(model);
   for (const [key,label] of [['input_tokens','输入'],['cached_input_tokens','其中缓存'],['output_tokens','输出'],['total_tokens','合计']]) {
-    const cell = tokenNode('td','numeric' + (key === 'total_tokens' ? ' total-cell' : ''),amount(usage,key));
+    const cell = usageNode('td','numeric' + (key === 'total_tokens' ? ' total-cell' : ''),amount(usage,key),selectedUnavailable(task));
     cell.dataset.label = label;
     row.append(cell);
   }
@@ -239,7 +261,7 @@ function taskRows(task, index) {
   const detail = el('tr','detail-row'); detail.id = 'detail-' + index; detail.hidden = !expanded.has(task.id);
   const cell = el('td'); cell.colSpan = 7;
   const content = el('div','detail-content');
-  content.append(detailCard('任务本体',task.own),detailCard('子任务 · ' + childCount + ' 个',task.children),detailCard($('include-children').checked ? '当前统计 · 含子任务' : '当前统计 · 仅本体',usage));
+  content.append(detailCard('任务本体',task.own,task.own_unavailable),detailCard('子任务 · ' + childCount + ' 个',task.children,task.children_unavailable),detailCard($('include-children').checked ? '当前统计 · 含子任务' : '当前统计 · 仅本体',usage,selectedUnavailable(task)));
   const metadata = el('div','detail-metadata','任务 ID：' + task.id + ' · 用量记录：' + format(task.response_count) + ' 条' + (task.records_source ? ' · 数据来源：' + task.records_source : ''));
   if (task.screenshot_title && task.screenshot_title !== task.title) metadata.prepend(el('p','task-alias','原始截图标题：' + task.screenshot_title));
   for (const warning of task.warnings || []) metadata.append(el('p','task-warning',warning));
@@ -251,28 +273,35 @@ function taskRows(task, index) {
   });
   return [row,detail];
 }
-function render() {
+function render(incremental = false) {
   document.querySelector('.eyebrow').textContent = (data.project_name || 'PERSONAL WORKSPACE') + ' / 本地用量';
   $('project-intro').textContent = '自动发现 ' + (data.project_name || '所选项目') + ' 的新增任务，持续记录历史用量。';
   const tasks = Array.isArray(data.tasks) ? [...data.tasks] : [];
   const total = totalsFor(tasks);
+  const incomplete = tasks.some(selectedUnavailable);
   for (const [id, value] of [['total-value',total.total_tokens],['input-value',Math.max(0,total.input_tokens-total.cached_input_tokens)],['cached-value',total.cached_input_tokens],['output-value',total.output_tokens]]) {
-    $(id).textContent = formatToken(value, false);
-    $(id).title = format(value) + ' Token';
+    $(id).textContent = incomplete ? value ? '≥ ' + confirmedToken(value,false) : '—' : formatToken(value, false);
+    $(id).title = incomplete ? value ? '已确认 ' + format(value) + ' Token，另有记录无法准确统计' : '记录无法准确统计，不代表没有消耗' : format(value) + ' Token';
   }
   document.querySelectorAll('.metric-unit').forEach(node => { node.textContent = $('unit').value === 'yi' ? '亿 TOKENS' : 'TOKENS'; });
-  $('total-note').textContent = '全部历史 · ' + tasks.length + ' 个任务 · ' + ($('include-children').checked ? '包含子任务' : '仅任务本体');
-  $('cache-note').textContent = total.input_tokens ? '占全部输入的 ' + (total.cached_input_tokens/total.input_tokens*100).toFixed(1) + '%' : '缓存是输入的一部分';
+  $('total-label').textContent = data.partial ? '当前已读用量' : incomplete ? '已确认用量' : '项目累计处理量';
+  $('total-note').textContent = data.partial ? '已显示 ' + tasks.length + ' / ' + (data.progress?.tasks_total ?? '?') + ' 个任务 · ' + (tasks.length === data.progress?.tasks_total ? '正在核对统计结果' : '其余仍在读取') : incomplete ? '部分记录无法统计 · 仅汇总已确认的用量' : '全部历史 · ' + tasks.length + ' 个任务 · ' + ($('include-children').checked ? '包含子任务' : '仅任务本体');
+  $('cache-note').textContent = total.input_tokens ? '占' + (incomplete ? '已确认' : '全部') + '输入的 ' + (total.cached_input_tokens/total.input_tokens*100).toFixed(1) + '%' : '缓存是输入的一部分';
   $('reasoning-note').textContent = '其中推理 ' + formatToken(total.reasoning_output_tokens) + ' Token';
   $('reasoning-note').title = format(total.reasoning_output_tokens) + ' Token';
-  $('task-count').textContent = tasks.length + ' 个任务';
-  $('scope-note').textContent = $('include-children').checked ? '当前统计包含任务本体与子任务' : '当前仅统计任务本体，已排除子任务';
+  if (incomplete) { $('reasoning-note').textContent = '推理用量也仅包含已确认记录'; $('reasoning-note').removeAttribute('title'); }
+  $('task-count').textContent = data.partial ? '已显示 ' + tasks.length + ' / ' + (data.progress?.tasks_total ?? '?') : tasks.length + ' 个任务';
+  $('scope-note').textContent = (incomplete ? '≥ 表示已确认下限，— 表示无法准确统计 · ' : data.partial ? '当前仅汇总已显示任务 · ' : '') + ($('include-children').checked ? '当前统计包含任务本体与子任务' : '当前仅统计任务本体，已排除子任务');
+  $('sort').disabled = Boolean(data.partial);
   const sort = $('sort').value;
-  tasks.sort((a,b) => sort === 'title' ? (a.title || '').localeCompare(b.title || '','zh-CN') : sort === 'activity' ? (validDate(b.last_activity)?.getTime() || 0)-(validDate(a.last_activity)?.getTime() || 0) : amount(selectedUsage(b),'total_tokens')-amount(selectedUsage(a),'total_tokens'));
-  const body = $('tasks'); body.replaceChildren();
+  if (!data.partial) tasks.sort((a,b) => sort === 'title' ? (a.title || '').localeCompare(b.title || '','zh-CN') : sort === 'activity' ? (validDate(b.last_activity)?.getTime() || 0)-(validDate(a.last_activity)?.getTime() || 0) : amount(selectedUsage(b),'total_tokens')-amount(selectedUsage(a),'total_tokens'));
+  const body = $('tasks'), existing = [...body.querySelectorAll('.task-row')];
+  const appendOnly = incremental && data.partial && existing.length > 0 && existing.length <= tasks.length && existing.every((row,i) => row.dataset.taskId === String(tasks[i].id));
+  if (!appendOnly) body.replaceChildren();
   if (!tasks.length) { const row = el('tr'); const cell = el('td','empty','没有找到可统计的任务记录。'); cell.colSpan = 7; row.append(cell); body.append(row); }
-  tasks.forEach((task,index) => body.append(...taskRows(task,index)));
+  tasks.forEach((task,index) => { if (!appendOnly || index >= existing.length) body.append(...taskRows(task,index)); });
   $('daily-panel').hidden = !$('include-children').checked;
+  $('daily-subtitle').textContent = data.partial ? '已读任务的每日用量 · 统计仍在继续' : data.incomplete ? '仅包含可准确统计记录的每日用量' : '最近 14 个有记录日期 · 包含子任务 · 悬停查看精确数量';
   const days = (Array.isArray(data.daily) ? data.daily : []).slice().sort((a,b) => a.date.localeCompare(b.date)).slice(-14);
   const chart = $('daily-chart'); chart.replaceChildren();
   if (!days.length) {
@@ -291,24 +320,69 @@ function render() {
   $('methodology').replaceChildren(...(data.methodology && data.methodology.length ? data.methodology : ['读取本地任务记录中的 token 用量，并按任务归集。','缓存输入属于输入；推理输出属于输出。','悬停数字可核对完整整数，也可切换显示单位。']).map(text => el('li','',text)));
   $('warnings').textContent = (data.warnings || []).join('；');
   $('source').textContent = data.source_home ? '记录位置：' + data.source_home : '';
-  $('export').disabled = tasks.length === 0;
+  $('export').disabled = tasks.length === 0 || Boolean(data.partial) || Boolean(data.incomplete);
+  $('export').title = data.partial ? '读取完成后可导出' : data.incomplete ? '部分记录无法准确统计，暂不导出不完整报表' : '导出完整整数用量';
   updateFooter();
 }
 function updateFooter() {
   const date = data && validDate(data.generated_at);
-  $('update-time').textContent = (date ? '更新于 ' + date.toLocaleString('zh-CN',{hour12:false}) : '等待首次读取') + (paused ? ' · 自动刷新已暂停' : ' · 每 ' + refreshSeconds + ' 秒自动刷新');
+  $('update-time').textContent = (data?.partial ? '已读部分 · ' : '') + (date ? '更新于 ' + date.toLocaleString('zh-CN',{hour12:false}) : '等待首次读取') + (paused ? ' · 自动刷新已暂停' : data?.partial ? ' · 正在继续读取' : ' · 每 ' + refreshSeconds + ' 秒自动刷新');
 }
 function schedule(delay = refreshSeconds*1000) {
   clearTimeout(timer);
   if (!paused) timer = setTimeout(refresh,delay);
 }
+function scopeKey(snapshot) {
+  return JSON.stringify([snapshot.source_home || '',snapshot.project_directory || '',snapshot.project_name || '']);
+}
+function clearSnapshot() {
+  data = null; expanded.clear();
+  for (const id of ['total-value','input-value','cached-value','output-value']) {
+    $(id).textContent = '—'; $(id).removeAttribute('title');
+  }
+  $('total-label').textContent = '项目累计处理量';
+  $('total-note').textContent = '全部历史 · 输入 + 输出';
+  $('cache-note').textContent = '缓存是输入的一部分';
+  $('reasoning-note').textContent = '包含推理 token';
+  $('reasoning-note').removeAttribute('title');
+  const row = el('tr'), cell = el('td','empty','正在读取所选项目的历史记录…');
+  cell.colSpan = 7; row.append(cell); $('tasks').replaceChildren(row);
+  $('task-count').textContent = '正在加载';
+  $('scope-note').textContent = '等待所选项目的任务记录';
+  $('daily-chart').replaceChildren();
+  $('daily-chart').setAttribute('aria-label','正在读取每日用量');
+  $('daily-subtitle').textContent = '等待所选项目的每日用量';
+  $('warnings').textContent = ''; $('source').textContent = '';
+  $('methodology').replaceChildren(el('li','','读取本地任务记录中的 token 用量，并按任务归集。'));
+  $('export').disabled = true; $('sort').disabled = false;
+  updateFooter();
+}
+function showProgress(progress, mode = 'initial') {
+  clearTimeout(progressHideTimer);
+  if (!loadingSince) loadingSince = Date.now();
+  // Avoid a flashing card for quick refreshes that retain a complete snapshot.
+  if (mode === 'refresh' && Date.now() - loadingSince < 800) return;
+  $('loading').hidden = false;
+  const complete = mode === 'complete';
+  const known = complete || typeof progress?.percent === 'number' && Number.isFinite(progress.percent);
+  const percent = complete ? 100 : known ? Math.max(0,Math.min(99.9,progress.percent)) : 0;
+  $('loading-title').textContent = complete ? data?.incomplete ? '读取结束，部分记录需要查看' : '历史记录已读取完成' : mode === 'refresh' ? '正在更新历史记录' : '正在读取历史记录';
+  $('loading-percent').textContent = known ? Math.floor(percent) + '%' : '准备中';
+  $('loading-track').classList.toggle('is-indeterminate',!known);
+  $('loading-fill').style.width = known ? percent + '%' : '30%';
+  if (known) $('loading-track').setAttribute('aria-valuenow',String(Math.floor(percent)));
+  else $('loading-track').removeAttribute('aria-valuenow');
+  $('loading-records').textContent = progress ? '已处理记录 ' + format(progress.logs_done) + ' / ' + format(progress.logs_total) + ' 份' : '正在查找项目记录…';
+  $('loading-tasks').textContent = progress ? '任务 ' + format(progress.tasks_done) + ' / ' + format(progress.tasks_total) : '';
+  $('loading-current').textContent = complete ? '全部任务已显示' : progress?.current_task ? '正在读取：' + progress.current_task : progress ? '正在核对统计结果…' : '记录较多时可能需要一点时间';
+  $('loading-note').textContent = complete ? data?.incomplete ? '可统计任务已显示；其他记录的原因可在任务详情中查看。' : '完整统计已就绪，可以导出 CSV。' : mode === 'refresh' ? '页面保留上次统计，更新完成后自动替换。' : '读完一个任务就显示一个；当前数字仅包含已读任务，完整统计仍在继续。';
+}
 async function refresh(force = false) {
   if (busy) return;
   clearTimeout(timer); busy = true; $('refresh').disabled = true;
   let waiting = false;
-  if (!data) {
-    $('loading').hidden = false;
-    $('loading').textContent = '正在读取历史记录，完成后会自动显示。记录较多时可能需要一点时间。';
+  if (!data && $('loading').hidden) {
+    showProgress(null);
     setStatus(paused ? '自动刷新已暂停' : '正在加载历史记录…',paused ? 'paused' : 'loading');
   }
   const controller = new AbortController(), timeout = setTimeout(() => controller.abort(),12000);
@@ -318,57 +392,56 @@ async function refresh(force = false) {
     if (response.status === 202) {
       const pending = await response.json();
       waiting = true;
-      // Another tab can change the project. Pending means no snapshot for that selection.
-      data = null;
-      expanded.clear();
-      for (const id of ['total-value','input-value','cached-value','output-value']) {
-        $(id).textContent = '—'; $(id).removeAttribute('title');
-      }
-      $('total-note').textContent = '全部历史 · 输入 + 输出';
-      $('cache-note').textContent = '缓存是输入的一部分';
-      $('reasoning-note').textContent = '包含推理 token';
-      $('reasoning-note').removeAttribute('title');
-      const row = el('tr'), cell = el('td','empty','正在读取所选项目的历史记录…');
-      cell.colSpan = 7; row.append(cell); $('tasks').replaceChildren(row);
-      $('daily-chart').replaceChildren();
-      $('daily-chart').setAttribute('aria-label','正在读取每日用量');
-      $('warnings').textContent = ''; $('source').textContent = '';
-      $('methodology').replaceChildren(el('li','','读取本地任务记录中的 token 用量，并按任务归集。'));
-      $('export').disabled = true;
-      updateFooter();
+      // A different tab can change the selected project while this page stays open.
+      const samePartial = data?.partial && scopeKey(data) === scopeKey(pending);
+      if (!samePartial) clearSnapshot();
+      const partial = pending.partial_snapshot;
+      if (partial && Array.isArray(partial.tasks) && partial.tasks.length) {
+        data = {...partial,partial:true,progress:pending.progress};
+        render(Boolean(samePartial));
+      } else if (data) clearSnapshot();
       $('error').hidden = true;
-      $('loading').hidden = false;
-      $('loading').textContent = (pending.message || '正在读取历史记录，请稍候…') + ' 完成后会自动显示，无需反复刷新。';
+      showProgress(pending.progress);
       if (pending.project_name) {
         document.querySelector('.eyebrow').textContent = pending.project_name + ' / 本地用量';
         $('project-intro').textContent = '正在读取 ' + pending.project_name + ' 的历史记录。';
       }
-      $('task-count').textContent = '正在加载';
       setStatus(paused ? '自动刷新已暂停' : '正在加载历史记录…',paused ? 'paused' : 'loading');
       return;
     }
     if (!response.ok) {
       const problem = await response.json().catch(() => ({}));
+      if (data && (data.partial || problem.project_name && scopeKey(problem) !== scopeKey(data))) clearSnapshot();
       throw new Error(problem.error || ('本地服务返回错误（' + response.status + '）。'));
     }
     const next = await response.json();
     if (!next || !Array.isArray(next.tasks)) throw new Error('收到的用量数据格式不正确。');
-    data = next; refreshSeconds = Math.max(5,Number(data.refresh_seconds) || 10);
+    if (data && scopeKey(data) !== scopeKey(next)) clearSnapshot();
+    data = {...next,partial:false}; refreshSeconds = Math.max(5,Number(data.refresh_seconds) || 10);
     render(); $('error').hidden = true;
     waiting = next.refreshing === true;
-    $('loading').hidden = true;
+    if (waiting) showProgress(next.progress,'refresh');
+    else {
+      if (loadingSince && !$('loading').hidden) {
+        showProgress(next.progress,'complete');
+        progressHideTimer = setTimeout(() => { $('loading').hidden = true; },1400);
+      }
+      loadingSince = 0;
+    }
     setStatus(paused ? '自动刷新已暂停' : waiting ? '正在更新记录…' : '本地监控中 · 每 ' + refreshSeconds + ' 秒刷新',paused ? 'paused' : waiting ? 'loading' : '');
   } catch (error) {
+    if (data?.partial) clearSnapshot();
+    clearTimeout(progressHideTimer); loadingSince = 0;
     $('loading').hidden = true;
     const reason = error.name === 'AbortError' ? '暂时没有收到响应，将自动重试。' : error.message === 'Failed to fetch' ? '无法连接本地监控服务，请重新打开监控器。' : error.message;
     $('error').textContent = reason + (data ? ' 页面保留上次成功读取的数据。' : ' 页面会继续重试。');
     $('error').hidden = false;
     setStatus('连接异常 · 等待重试','error');
     if (!data) { const row = el('tr'); const cell = el('td','empty','暂时无法读取记录，请检查上方提示。'); cell.colSpan = 7; row.append(cell); $('tasks').replaceChildren(row); $('task-count').textContent = '尚未读取'; }
-  } finally { clearTimeout(timeout); busy = false; $('refresh').disabled = false; schedule(waiting ? 2000 : refreshSeconds*1000); }
+  } finally { clearTimeout(timeout); busy = false; $('refresh').disabled = false; schedule(waiting ? 1000 : refreshSeconds*1000); }
 }
 function exportCsv() {
-  if (!data) return;
+  if (!data || data.partial || data.incomplete) return;
   const scope = $('include-children').checked ? '含子任务' : '仅任务本体';
   const rows = [['任务','任务 ID','统计范围','模型','输入 token','缓存输入 token','未缓存输入 token','输出 token','推理输出 token','合计 token','子任务数量','最近活动']];
   for (const task of data.tasks) {

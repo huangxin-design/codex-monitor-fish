@@ -54,7 +54,9 @@ class UsageTests(unittest.TestCase):
         second = self.parse([record('a')], pending + b'\n')
         self.assertEqual(first['usage']['total_tokens'], 110)
         self.assertTrue(first['warnings'])
+        self.assertTrue(first['unavailable'])
         self.assertEqual(second['usage']['total_tokens'], 220)
+        self.assertFalse(second.get('unavailable', False))
 
     def test_reproducible_cutoff(self):
         self.assertEqual(self.parse([record('a')], cutoff='2026-09-07T16:59:00Z')['response_count'], 0)
@@ -65,6 +67,7 @@ class UsageTests(unittest.TestCase):
         data = self.parse([later], cutoff='2026-09-07T17:00:00Z')
         self.assertEqual(data['response_count'], 0)
         self.assertFalse(data['warnings'])
+        self.assertFalse(data.get('unavailable', False))
 
     def test_missing_response_id_is_not_silent(self):
         with self.assertRaisesRegex(MonitorError, '所有记录'):
@@ -81,6 +84,7 @@ class UsageTests(unittest.TestCase):
         data = self.parse([record('good'), broken])
         self.assertEqual(data['usage']['total_tokens'], 110)
         self.assertTrue(data['warnings'])
+        self.assertTrue(data['unavailable'])
 
     def test_missing_timestamp_preserves_total_with_warning(self):
         item = record('a')
@@ -89,11 +93,33 @@ class UsageTests(unittest.TestCase):
         self.assertEqual(data['usage']['total_tokens'], 110)
         self.assertEqual(data['daily'], {})
         self.assertTrue(data['warnings'])
+        self.assertFalse(data.get('unavailable', False))
+        historical = self.parse([item], cutoff='2026-09-08T00:00:00Z')
+        self.assertEqual(historical['usage']['total_tokens'], 0)
+        self.assertTrue(historical['unavailable'])
 
     def test_unknown_empty_log_is_explicitly_uncertain(self):
         data = self.parse([{'type': 'future-format', 'payload': {}}])
         self.assertEqual(data['usage']['total_tokens'], 0)
         self.assertIn('不代表确认没有消耗', data['warnings'][0])
+        self.assertTrue(data['unavailable'])
+
+    def test_no_own_or_all_malformed_records_never_claim_known_zero(self):
+        for lines, tail in (([], b''), ([], b'broken json\n'),
+                            ([record('inherited', thread='parent')], b'')):
+            for cutoff in (None, '2026-09-08T00:00:00Z'):
+                with self.subTest(lines=lines, tail=tail, cutoff=cutoff):
+                    data = self.parse(lines, tail=tail, cutoff=cutoff)
+                    self.assertEqual(data['usage']['total_tokens'], 0)
+                    self.assertTrue(data['unavailable'])
+
+    def test_rejected_records_outside_cutoff_do_not_make_known_total_incomplete(self):
+        before = record('valid')
+        after = record(None)
+        after['timestamp'] = '2026-09-09T00:00:00Z'
+        data = self.parse([before, after], cutoff='2026-09-08T00:00:00Z')
+        self.assertEqual(data['usage']['total_tokens'], 110)
+        self.assertFalse(data.get('unavailable', False))
 
     def test_cached_and_reasoning_are_not_added_twice(self):
         usage = self.parse([record('a')])['usage']
@@ -122,6 +148,23 @@ class UsageTests(unittest.TestCase):
         self.assertEqual(data['usage']['total_tokens'], 110)
         self.assertEqual(data['models'], [])
         self.assertTrue(data['warnings'])
+
+    def test_large_log_reports_consumed_bytes_without_changing_accounting(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'large.jsonl'
+            filler = json.dumps({'type': 'message', 'payload': {'text': 'x' * 4096}}).encode() + b'\n'
+            path.write_bytes(filler * 800 + json.dumps(record('a')).encode() + b'\n')
+            events = []
+            with patch('monitor.time.monotonic', return_value=0):
+                data = parse_records(path, 'task', progress=lambda done, total: events.append((done, total)))
+            self.assertEqual(data, parse_records(path, 'task'))
+            self.assertEqual(data['usage']['total_tokens'], 110)
+            size = path.stat().st_size
+            self.assertEqual(events[0], (0, size))
+            self.assertEqual(events[-1], (size, size))
+            self.assertTrue(any(0 < done < size for done, total in events))
+            self.assertEqual([done for done, _ in events], sorted(done for done, _ in events))
+            self.assertTrue(all(total == size for _, total in events))
 
 
 class DiscoveryTests(unittest.TestCase):
@@ -158,6 +201,79 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual({t['id'] for t in second['tasks']}, {'original', 'new'})
         self.assertEqual(second['totals']['total_tokens'], 330)
         self.assertEqual(next(t for t in second['tasks'] if t['id'] == 'new')['screenshot_title'], '')
+
+    def test_unavailable_root_preserves_compatible_tasks_and_recovers_after_log_update(self):
+        self.add_task('new', total=220)
+        legacy = {'type': 'event_msg', 'payload': {'type': 'token_count',
+                  'info': {'total_token_usage': {'total_tokens': 9000}}}}
+        for invalid, warning in ((legacy, '旧版 token_count'), (record(None, thread='original'), '所有记录')):
+            with self.subTest(warning=warning):
+                path = self.home / 'original.jsonl'
+                path.write_text(json.dumps(invalid) + '\n', encoding='utf-8')
+                self.monitor.cache.clear()
+                with patch('monitor.parse_records', wraps=parse_records) as parse:
+                    events = []
+                    data = self.monitor.snapshot(progress=events.append)
+                    initial_calls = parse.call_count
+                    self.monitor.snapshot()
+                    self.assertEqual(parse.call_count, initial_calls)
+                self.assertTrue(data['incomplete'])
+                self.assertEqual(data['totals']['total_tokens'], 220)
+                self.assertEqual(sum(day['total_tokens'] for day in data['daily']), 220)
+                tasks = {task['id']: task for task in data['tasks']}
+                self.assertTrue(tasks['original']['own_unavailable'])
+                self.assertFalse(tasks['original']['children_unavailable'])
+                self.assertEqual(tasks['original']['unavailable_logs'], 1)
+                self.assertIn(warning, ' '.join(tasks['original']['warnings']))
+                self.assertFalse(tasks['new']['own_unavailable'])
+                self.assertEqual(tasks['new']['usage']['total_tokens'], 220)
+                self.assertEqual(events[-1]['progress']['percent'], 100)
+                self.assertTrue(events[-1]['partial_snapshot']['incomplete'])
+                with self.assertRaisesRegex(MonitorError, '统计不完整'):
+                    csv_bytes(data)
+                path.write_text(json.dumps(record('recovered', thread='original')) + '\n', encoding='utf-8')
+                recovered = self.monitor.snapshot()
+                self.assertFalse(recovered['incomplete'])
+                self.assertEqual(recovered['totals']['total_tokens'], 330)
+
+    def test_unavailable_children_preserve_valid_parent_and_sibling(self):
+        self.add_task('legacy-child', source='subagent', parent='original')
+        self.add_task('missing-log', source='subagent', parent='original')
+        self.add_task('valid-child', source='subagent', parent='original', total=220)
+        (self.home / 'legacy-child.jsonl').write_text(json.dumps({
+            'type': 'event_msg', 'payload': {'type': 'token_count',
+            'info': {'total_token_usage': {'total_tokens': 9000}}}}) + '\n', encoding='utf-8')
+        (self.home / 'missing-log.jsonl').unlink()
+        self.conn.execute('INSERT INTO thread_spawn_edges VALUES (?,?)', ('original', 'missing-index'))
+        self.conn.commit()
+        data = self.monitor.snapshot()
+        task = data['tasks'][0]
+        self.assertTrue(data['incomplete'])
+        self.assertFalse(task['own_unavailable'])
+        self.assertTrue(task['children_unavailable'])
+        self.assertEqual(task['unavailable_logs'], 3)
+        self.assertEqual(task['own']['total_tokens'], 110)
+        self.assertEqual(task['children']['total_tokens'], 220)
+        self.assertEqual(task['usage']['total_tokens'], 330)
+        self.assertEqual(data['totals']['total_tokens'], 330)
+
+    def test_partly_invalid_log_keeps_known_usage_but_blocks_complete_export(self):
+        valid = record('valid', thread='original')
+        rejected = record('bad', thread='original')
+        rejected['payload']['usage']['total_tokens'] = 999
+        for extra, tail in (([rejected], b''), ([record(None, thread='original')], b''),
+                            ([], b'malformed\n'), ([], b'unfinished')):
+            with self.subTest(extra=extra, tail=tail):
+                (self.home / 'original.jsonl').write_bytes(
+                    b''.join(json.dumps(item).encode() + b'\n' for item in [valid, *extra]) + tail)
+                data = self.monitor.snapshot()
+                self.assertEqual(data['totals']['total_tokens'], 110)
+                self.assertEqual(data['tasks'][0]['own']['total_tokens'], 110)
+                self.assertTrue(data['tasks'][0]['own_unavailable'])
+                self.assertEqual(data['tasks'][0]['unavailable_logs'], 1)
+                self.assertTrue(data['incomplete'])
+                with self.assertRaisesRegex(MonitorError, '统计不完整'):
+                    csv_bytes(data)
 
     def test_scope_archive_and_children_do_not_duplicate(self):
         self.add_task('archived', archived=1, total=220)
@@ -377,6 +493,111 @@ class DiscoveryTests(unittest.TestCase):
         self.config['project_name'] = '朋友的项目'
         self.assertEqual(self.monitor.snapshot()['project_name'], '朋友的项目')
 
+    def test_progress_partials_only_include_completed_roots_and_preserve_totals(self):
+        self.add_task('shared', source='subagent', parent='original', total=220)
+        self.add_task('new', total=330)
+        self.conn.execute('INSERT INTO thread_spawn_edges VALUES (?,?)', ('new', 'shared'))
+        self.conn.execute('INSERT INTO thread_spawn_edges VALUES (?,?)', ('original', 'missing-index'))
+        self.conn.commit()
+        self.add_task('missing-log', source='subagent', parent='original')
+        (self.home / 'missing-log.jsonl').unlink()
+        self.add_task('excluded', source='subagent', parent='original', total=440)
+        self.add_task('excluded-child', source='subagent', parent='excluded', total=550)
+        self.config['exclude_task_ids'].append('excluded')
+        self.add_task('elsewhere', cwd='D:/work/Another', total=660)
+
+        events = []
+        result = self.monitor.snapshot(progress=events.append)
+        baseline = self.monitor.snapshot()
+        self.assertEqual({k: v for k, v in result.items() if k != 'generated_at'},
+                         {k: v for k, v in baseline.items() if k != 'generated_at'})
+        self.assertEqual(result['totals']['total_tokens'], 660)
+        self.assertEqual(events[0]['partial_snapshot'], None)
+        self.assertEqual(events[0]['progress']['logs_total'], 5)
+        self.assertEqual(events[0]['progress']['tasks_total'], 2)
+        self.assertEqual(events[-1]['progress']['logs_done'], 5)
+        self.assertEqual(events[-1]['progress']['tasks_done'], 2)
+        self.assertEqual(events[-1]['progress']['percent'], 100)
+        percents = [event['progress']['percent'] for event in events]
+        self.assertEqual(percents, sorted(percents))
+        self.assertTrue(all(0 <= value < 100 for value in percents[:-1]))
+        first_partial = None
+        for event in events:
+            status, partial = event['progress'], event['partial_snapshot']
+            self.assertIn(status['current_task'], ('', 'original', 'new'))
+            self.assertNotIn(str(self.home), json.dumps(status))
+            if partial is None:
+                self.assertEqual(status['tasks_done'], 0)
+                continue
+            self.assertEqual(len(partial['tasks']), status['tasks_done'])
+            self.assertEqual(partial['totals'], add(*(task['usage'] for task in partial['tasks'])))
+            if status['tasks_done'] == 1:
+                first_partial = partial
+                self.assertEqual([task['id'] for task in partial['tasks']], ['original'])
+                self.assertEqual(partial['totals']['total_tokens'], 330)
+                self.assertEqual(sum(day['total_tokens'] for day in partial['daily']), 330)
+                self.assertEqual(partial['tasks'][0]['own']['total_tokens'], 110)
+                self.assertEqual(partial['tasks'][0]['children']['total_tokens'], 220)
+                self.assertEqual(partial['tasks'][0]['response_count'], 2)
+        self.assertIsNotNone(first_partial)
+        self.assertIsNot(first_partial['tasks'], result['tasks'])
+        self.assertIsNot(first_partial['tasks'][0]['own'], result['tasks'][0]['own'])
+        self.assertEqual(len(first_partial['tasks']), 1)
+
+        cached_events = []
+        with patch('monitor.parse_records', wraps=parse_records) as parse:
+            cached = self.monitor.snapshot(progress=cached_events.append)
+        parse.assert_not_called()
+        self.assertEqual(cached['totals'], result['totals'])
+        self.assertEqual(cached_events[-1]['progress']['logs_done'], 5)
+        self.assertEqual(cached_events[-1]['progress']['logs_total'], 5)
+
+    def test_progress_reports_large_file_before_root_is_complete(self):
+        path = self.home / 'original.jsonl'
+        filler = json.dumps({'type': 'message', 'payload': {'text': 'x' * 4096}}).encode() + b'\n'
+        path.write_bytes(filler * 800 + path.read_bytes())
+        events = []
+        self.monitor.snapshot(progress=events.append)
+        intermediate = [event for event in events if event['progress']['log_bytes_total']
+                        and 0 < event['progress']['log_bytes_done'] < event['progress']['log_bytes_total']]
+        self.assertTrue(intermediate)
+        for event in intermediate:
+            self.assertIsNone(event['partial_snapshot'])
+            self.assertEqual(event['progress']['tasks_done'], 0)
+            self.assertEqual(event['progress']['logs_done'], 0)
+            self.assertGreater(event['progress']['percent'], 0)
+            self.assertLess(event['progress']['percent'], 100)
+
+    def test_progress_cutoff_and_empty_project_complete_truthfully(self):
+        self.add_task('future', created=1788849134314)
+        self.add_task('future-child', source='subagent', parent='original', created=1788849134314)
+        events = []
+        self.monitor.snapshot('2026-09-08T01:46:00Z', progress=events.append)
+        self.assertEqual(events[-1]['progress']['tasks_total'], 1)
+        self.assertEqual(events[-1]['progress']['logs_total'], 1)
+        self.config['project_directory'] = '/empty/project'
+        events = []
+        result = self.monitor.snapshot(progress=events.append)
+        self.assertEqual(events[0]['progress']['percent'], None)
+        self.assertEqual(events[-1]['progress']['percent'], 100)
+        self.assertEqual(events[-1]['progress']['logs_total'], 0)
+        self.assertEqual(events[-1]['partial_snapshot'], result)
+
+    def test_progress_callback_failure_is_not_treated_as_missing_log(self):
+        for cached, error in ((False, ValueError), (True, ValueError),
+                              (False, MonitorError), (True, MonitorError)):
+            with self.subTest(cached=cached, error=error):
+                self.monitor.cache.clear()
+                if cached:
+                    self.monitor.snapshot()
+
+                def reject_file_progress(event):
+                    if event['progress']['log_bytes_total']:
+                        raise error('invalid callback metadata')
+
+                with self.assertRaisesRegex(error, 'invalid callback metadata'):
+                    self.monitor.snapshot(progress=reject_file_progress)
+
 
 class PortableTests(unittest.TestCase):
     def test_default_home_uses_environment(self):
@@ -435,6 +656,26 @@ class PortableTests(unittest.TestCase):
         self.assertEqual(context.exception.code, 503)
         body = json.loads(context.exception.read())
         self.assertIn('数据库结构暂不受支持', body['error'])
+
+    def test_incomplete_api_remains_readable_but_csv_is_refused(self):
+        class Incomplete:
+            config = {}
+            def snapshot(self):
+                return {'incomplete': True, 'tasks': [], 'totals': zero()}
+        server = ThreadingHTTPServer(('127.0.0.1', 0), make_handler(Incomplete()))
+        self.addCleanup(server.server_close)
+        worker = threading.Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        self.addCleanup(server.shutdown)
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        origin = 'http://127.0.0.1:' + str(server.server_port)
+        with opener.open(origin + '/api/usage') as response:
+            self.assertEqual(response.status, 200)
+            self.assertTrue(json.load(response)['incomplete'])
+        with self.assertRaises(urllib.error.HTTPError) as context:
+            opener.open(origin + '/api/export.csv')
+        self.assertEqual(context.exception.code, 503)
+        self.assertIn('统计不完整', json.loads(context.exception.read())['error'])
 
 
 if __name__ == '__main__':

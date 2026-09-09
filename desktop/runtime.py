@@ -1,6 +1,7 @@
 """One-click local desktop launcher for Codex 监控小鱼 (standard library only)."""
 import argparse
 from contextlib import closing
+from copy import deepcopy
 import ctypes
 import json
 import ntpath
@@ -24,7 +25,7 @@ DESKTOP = ROOT / 'desktop'
 sys.path.insert(0, str(APP))
 import monitor as accounting
 APP_ID = 'codex-monitor-fish-desktop'
-VERSION = '0.2.1'
+VERSION = '0.2.2'
 MAX_BODY = 16 * 1024
 
 
@@ -112,6 +113,8 @@ class DesktopState:
         self.scan_completed_at = None
         self.scan_result = None
         self.scan_error = None
+        self.scan_progress = None
+        self.scan_partial = None
         try:
             if self.settings_path.is_file():
                 settings = json.loads(self.settings_path.read_text(encoding='utf-8'))
@@ -166,6 +169,7 @@ class DesktopState:
             self.config, self.monitor, self.home = config, monitor, home
             self.startup_error = None
             self.scan_result = self.scan_error = self.scan_completed_at = None
+            self.scan_progress = self.scan_partial = None
             return {'ok': True, 'project_directory': config['project_directory']}
 
     def snapshot(self):
@@ -176,10 +180,18 @@ class DesktopState:
         return monitor.snapshot()
 
     def _scan_usage(self, monitor):
+        def progress(payload):
+            # Validate before publishing and detach lists from the scanner's next update.
+            update = json.loads(json.dumps(payload, ensure_ascii=False, allow_nan=False))
+            current, partial = update['progress'], update['partial_snapshot']
+            with self.lock:
+                if self.monitor is monitor:
+                    self.scan_progress, self.scan_partial = current, partial
+
         result, error = None, None
         try:
-            result = monitor.snapshot()
-            json.dumps(result, ensure_ascii=False, allow_nan=False)
+            result = monitor.snapshot(progress=progress)
+            result = json.loads(json.dumps(result, ensure_ascii=False, allow_nan=False))
         except Exception as exc:
             result = None
             error = str(exc) if isinstance(exc, accounting.MonitorError) else '暂时无法读取本地数据，请稍后重试。'
@@ -187,6 +199,9 @@ class DesktopState:
             # A completed scan for a previous selection must never reach the new project.
             if self.monitor is monitor:
                 self.scan_result, self.scan_error = result, error
+                self.scan_partial = None
+                if error is not None:
+                    self.scan_progress = None
                 self.scan_completed_at = time.monotonic()
             self.scan_running = False
 
@@ -195,18 +210,25 @@ class DesktopState:
         with self.lock:
             if self.monitor is None:
                 raise accounting.MonitorError('请先选择要监控的项目。')
+            identity = {'project_name': self.config.get('project_name') or '当前项目',
+                        'project_directory': self.config.get('project_directory'),
+                        'source_home': str(self.home)}
             due = (self.scan_completed_at is None or refresh or
                    time.monotonic() - self.scan_completed_at >= self.config.get('refresh_seconds', 10))
             if not self.scan_running and due:
                 self.scan_running = True
                 self.scan_error = None
+                self.scan_progress = self.scan_partial = None
                 threading.Thread(target=self._scan_usage, args=(self.monitor,), daemon=True).start()
             if self.scan_error is not None:
-                return 503, {'error': self.scan_error}
+                return 503, {**identity, 'error': self.scan_error,
+                             'progress': None, 'partial_snapshot': None}
             if self.scan_result is None:
                 return 202, {'status': 'loading', 'message': '正在读取历史记录，请稍候…',
-                             'project_name': self.config.get('project_name') or '当前项目'}
-            return 200, {**self.scan_result, 'refreshing': self.scan_running}
+                             **identity, 'progress': deepcopy(self.scan_progress),
+                             'partial_snapshot': deepcopy(self.scan_partial)}
+            return 200, {**deepcopy(self.scan_result), 'refreshing': self.scan_running,
+                         'progress': deepcopy(self.scan_progress)}
 
 
 def make_handler(state):
