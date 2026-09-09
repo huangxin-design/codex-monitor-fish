@@ -21,7 +21,8 @@
     @media(max-width:650px){main{padding:20px 16px}.topbar{grid-template-columns:1fr auto;gap:12px;margin-bottom:18px;padding-bottom:17px}.brand{font-size:14px}.brandmark{width:31px;height:31px;border-radius:9px}.profile{grid-column:2;grid-row:1;border:0;padding:0}.avatar-wrap img{width:30px;height:30px}.status{grid-column:1/-1;grid-row:2;font-size:11px;margin-left:3px;gap:9px}.hero{display:block;min-height:286px;padding:25px 23px 27px;border-radius:17px;margin-bottom:16px}.hero-copy{max-width:100%}.hero-art{position:absolute;z-index:-1;right:-56px;top:-21px;width:225px;height:200px;margin-left:0;opacity:.44}.hero:before{mask-image:linear-gradient(120deg,transparent,#0003)}.art-caption{display:none}.eyebrow{font-size:11px;margin-bottom:17px;padding:4px 8px}h1{font-size:34px;letter-spacing:-.055em}.intro{font-size:11px;margin-top:12px;max-width:235px;color:#c2aeb9;line-height:1.9}.hero-actions{gap:7px;margin-top:23px}.button{font-size:11px;padding:8px 11px;gap:5px;min-height:37px}.button svg{width:14px;height:14px}.scope-explainer{margin-bottom:19px;padding:0 3px}.scope-explainer summary{gap:7px;font-size:11px;align-items:flex-start;line-height:1.8}.scope-explainer summary svg{margin-top:2px;width:13px;height:13px}.scope-hint{font-size:11px;margin-left:auto;gap:3px}.scope-body{font-size:11px;padding:10px 12px}.metrics{gap:10px;margin-bottom:19px}.metric{padding:17px 16px;border-radius:13px}.metric-label{font-size:11px;gap:4px}.metric-icon{width:22px;height:22px;font-size:14px;border-radius:6px}.metric-value{font-size:30px;margin-top:17px;letter-spacing:-.06em}.metric-unit{font-size:11px}.metric-note{font-size:11px;margin-top:13px;min-height:34px;line-height:1.7}.table-toolbar{padding:18px 16px;gap:15px}.section-heading h2{font-size:15px}.table-controls{display:grid;grid-template-columns:1fr auto;gap:13px 12px;width:100%}.toggle-label{font-size:11px;grid-column:1/-1}.sort-label{font-size:11px;justify-content:flex-start;gap:7px}.sort-label:last-child{justify-content:flex-end}.sort-label select{font-size:11px;padding:5px 6px;max-width:120px}.badge{font-size:11px}.task-row{gap:12px 11px;margin:0 11px 11px;padding:15px 13px}.task-index{display:none}.task-title-button{gap:8px}.task-title{font-size:14px;line-height:1.65}.task-meta{font-size:12px;line-height:1.6;margin-top:5px}.chevron{width:10px;height:10px;margin-top:6px}.model-cell{padding-left:18px;margin-top:-4px}.numeric{font-size:13px}.numeric:before{font-size:11px;margin-bottom:3px}.total-cell{font-size:15px;line-height:1.6;letter-spacing:-.045em}.total-cell:before{font-size:11px}.time-cell{font-size:11px;padding-top:8px}.detail-row{margin:-4px 11px 11px}.detail-content{grid-template-columns:1fr;padding:10px;gap:10px}.detail-card{padding:13px 14px}.detail-card dl div{font-size:11px}.detail-metadata{font-size:11px}.table-footer{padding:13px 16px;font-size:11px;gap:6px}.lower-grid{grid-template-columns:1fr;gap:14px;margin-top:16px}.panel{padding:20px}.daily-chart{height:125px;gap:6px}.day-label{font-size:11px}.panel-subtitle{font-size:11px}.panel-kicker{font-size:11px}.method-list{font-size:11px}.notes{margin-top:18px;font-size:11px}.page-footer{display:block;margin-top:19px;font-size:11px;line-height:1.9}.page-footer>span{display:flex;margin:4px 0}.source{font-size:11px}}
     @media(max-width:360px){main{padding:16px 12px}.hero{padding:23px 17px}h1{font-size:30px}.button{padding:8px 9px;font-size:11px}.metric{padding:15px 12px}.metric-value{font-size:26px}.scope-hint{font-size:0}.scope-hint:after{font-size:13px}.table-controls{gap:12px 8px}.sort-label{gap:5px}.total-cell{font-size:13px}}
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}.orb-depth,.mesh-depth{transform:none}}
-  </style>
+.loading{margin:0 0 22px;padding:13px 17px;border:1px solid #ffffff16;border-radius:12px;background:#1b1418;color:#c6adb9;font-size:13px;line-height:1.8}
+</style>
 </head>
 <body>
 <main>
@@ -58,6 +59,7 @@
       <span class="art-caption">EVERY TOKEN, A TRACE.</span>
     </div>
   </section>
+  <div class="loading" id="loading" role="status" hidden></div>
   <div class="error" id="error" role="alert" hidden></div>
   <details class="scope-explainer" aria-label="项目处理量与账户额度的区别">
     <summary><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 7v4m0-7v1"/></svg><strong>项目历史处理量 ≠ 账户额度消耗比例</strong><span class="scope-hint">统计说明</span></summary>
@@ -250,6 +252,7 @@ function taskRows(task, index) {
   return [row,detail];
 }
 function render() {
+  document.querySelector('.eyebrow').textContent = (data.project_name || 'PERSONAL WORKSPACE') + ' / 本地用量';
   $('project-intro').textContent = '自动发现 ' + (data.project_name || '所选项目') + ' 的新增任务，持续记录历史用量。';
   const tasks = Array.isArray(data.tasks) ? [...data.tasks] : [];
   const total = totalsFor(tasks);
@@ -295,17 +298,55 @@ function updateFooter() {
   const date = data && validDate(data.generated_at);
   $('update-time').textContent = (date ? '更新于 ' + date.toLocaleString('zh-CN',{hour12:false}) : '等待首次读取') + (paused ? ' · 自动刷新已暂停' : ' · 每 ' + refreshSeconds + ' 秒自动刷新');
 }
-function schedule() {
+function schedule(delay = refreshSeconds*1000) {
   clearTimeout(timer);
-  if (!paused) timer = setTimeout(refresh,refreshSeconds*1000);
+  if (!paused) timer = setTimeout(refresh,delay);
 }
-async function refresh() {
+async function refresh(force = false) {
   if (busy) return;
   clearTimeout(timer); busy = true; $('refresh').disabled = true;
+  let waiting = false;
+  if (!data) {
+    $('loading').hidden = false;
+    $('loading').textContent = '正在读取历史记录，完成后会自动显示。记录较多时可能需要一点时间。';
+    setStatus(paused ? '自动刷新已暂停' : '正在加载历史记录…',paused ? 'paused' : 'loading');
+  }
   const controller = new AbortController(), timeout = setTimeout(() => controller.abort(),12000);
   try {
     if (location.protocol === 'file:') throw new Error('请通过“打开监控器”启动页面，直接打开 HTML 无法读取本地用量。');
-    const response = await fetch('/api/usage',{cache:'no-store',signal:controller.signal});
+    const response = await fetch('/api/usage' + (force === true ? '?refresh=1' : ''),{cache:'no-store',signal:controller.signal});
+    if (response.status === 202) {
+      const pending = await response.json();
+      waiting = true;
+      // Another tab can change the project. Pending means no snapshot for that selection.
+      data = null;
+      expanded.clear();
+      for (const id of ['total-value','input-value','cached-value','output-value']) {
+        $(id).textContent = '—'; $(id).removeAttribute('title');
+      }
+      $('total-note').textContent = '全部历史 · 输入 + 输出';
+      $('cache-note').textContent = '缓存是输入的一部分';
+      $('reasoning-note').textContent = '包含推理 token';
+      $('reasoning-note').removeAttribute('title');
+      const row = el('tr'), cell = el('td','empty','正在读取所选项目的历史记录…');
+      cell.colSpan = 7; row.append(cell); $('tasks').replaceChildren(row);
+      $('daily-chart').replaceChildren();
+      $('daily-chart').setAttribute('aria-label','正在读取每日用量');
+      $('warnings').textContent = ''; $('source').textContent = '';
+      $('methodology').replaceChildren(el('li','','读取本地任务记录中的 token 用量，并按任务归集。'));
+      $('export').disabled = true;
+      updateFooter();
+      $('error').hidden = true;
+      $('loading').hidden = false;
+      $('loading').textContent = (pending.message || '正在读取历史记录，请稍候…') + ' 完成后会自动显示，无需反复刷新。';
+      if (pending.project_name) {
+        document.querySelector('.eyebrow').textContent = pending.project_name + ' / 本地用量';
+        $('project-intro').textContent = '正在读取 ' + pending.project_name + ' 的历史记录。';
+      }
+      $('task-count').textContent = '正在加载';
+      setStatus(paused ? '自动刷新已暂停' : '正在加载历史记录…',paused ? 'paused' : 'loading');
+      return;
+    }
     if (!response.ok) {
       const problem = await response.json().catch(() => ({}));
       throw new Error(problem.error || ('本地服务返回错误（' + response.status + '）。'));
@@ -314,14 +355,17 @@ async function refresh() {
     if (!next || !Array.isArray(next.tasks)) throw new Error('收到的用量数据格式不正确。');
     data = next; refreshSeconds = Math.max(5,Number(data.refresh_seconds) || 10);
     render(); $('error').hidden = true;
-    setStatus(paused ? '自动刷新已暂停' : '本地监控中 · 每 ' + refreshSeconds + ' 秒刷新',paused ? 'paused' : '');
+    waiting = next.refreshing === true;
+    $('loading').hidden = true;
+    setStatus(paused ? '自动刷新已暂停' : waiting ? '正在更新记录…' : '本地监控中 · 每 ' + refreshSeconds + ' 秒刷新',paused ? 'paused' : waiting ? 'loading' : '');
   } catch (error) {
-    const reason = error.name === 'AbortError' ? '读取超时。' : error.message === 'Failed to fetch' ? '无法连接本地监控服务。' : error.message;
-    $('error').textContent = reason + (data ? ' 页面保留上次成功读取的数据，可点击“立即刷新”重试。' : ' 请重新运行“打开监控器”，再点击“立即刷新”。');
+    $('loading').hidden = true;
+    const reason = error.name === 'AbortError' ? '暂时没有收到响应，将自动重试。' : error.message === 'Failed to fetch' ? '无法连接本地监控服务，请重新打开监控器。' : error.message;
+    $('error').textContent = reason + (data ? ' 页面保留上次成功读取的数据。' : ' 页面会继续重试。');
     $('error').hidden = false;
     setStatus('连接异常 · 等待重试','error');
     if (!data) { const row = el('tr'); const cell = el('td','empty','暂时无法读取记录，请检查上方提示。'); cell.colSpan = 7; row.append(cell); $('tasks').replaceChildren(row); $('task-count').textContent = '尚未读取'; }
-  } finally { clearTimeout(timeout); busy = false; $('refresh').disabled = false; schedule(); }
+  } finally { clearTimeout(timeout); busy = false; $('refresh').disabled = false; schedule(waiting ? 2000 : refreshSeconds*1000); }
 }
 function exportCsv() {
   if (!data) return;
@@ -343,7 +387,7 @@ function exportCsv() {
   link.href = url; link.download = 'token用量-' + scope + '-' + new Date().toLocaleDateString('sv-SE') + '.csv';
   document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url),1000);
 }
-$('refresh').addEventListener('click',refresh);
+$('refresh').addEventListener('click',() => refresh(true));
 $('pause').addEventListener('click',() => {
   paused = !paused; $('pause').setAttribute('aria-pressed',String(paused)); $('pause-label').textContent = paused ? '继续刷新' : '暂停刷新';
   setStatus(paused ? '自动刷新已暂停' : '本地监控中 · 每 ' + refreshSeconds + ' 秒刷新',paused ? 'paused' : '');

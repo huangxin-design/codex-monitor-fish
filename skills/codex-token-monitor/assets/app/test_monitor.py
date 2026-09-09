@@ -1,6 +1,7 @@
 import csv
 import io
 import json
+import os
 import sqlite3
 from pathlib import Path
 import tempfile
@@ -218,6 +219,79 @@ class DiscoveryTests(unittest.TestCase):
         (self.home / 'original.jsonl').rename(root / 'rollout-original.jsonl')
         self.assertEqual(self.monitor.snapshot()['totals']['total_tokens'], 110)
 
+    @unittest.skipUnless(os.name == 'nt', 'Windows extended local paths')
+    def test_extended_local_log_and_home_use_direct_cached_path(self):
+        source = '\\\\?\\' + str(self.home / 'original.jsonl')
+        self.conn.execute('UPDATE threads SET rollout_path=?', (source,))
+        self.conn.commit()
+        for home in (str(self.home), '\\\\?\\' + str(self.home)):
+            with self.subTest(home=home):
+                monitor = Monitor({**self.config, 'codex_home': home})
+                with (patch.object(Path, 'rglob', side_effect=AssertionError('unexpected fallback')),
+                      patch('monitor.parse_records', wraps=parse_records) as parse):
+                    self.assertEqual(monitor.snapshot()['totals']['total_tokens'], 110)
+                    self.assertEqual(monitor.snapshot()['totals']['total_tokens'], 110)
+                self.assertEqual(parse.call_count, 1)
+
+    def test_relocated_path_cache_avoids_scan_and_rediscovers_moved_log(self):
+        sessions = self.home / 'sessions'
+        sessions.mkdir()
+        relocated = sessions / 'rollout-original.jsonl'
+        (self.home / 'original.jsonl').rename(relocated)
+        self.assertEqual(self.monitor.snapshot()['totals']['total_tokens'], 110)
+        with (patch.object(Path, 'rglob', side_effect=AssertionError('unexpected fallback')),
+              patch('monitor.parse_records', wraps=parse_records) as parse):
+            self.assertEqual(self.monitor.snapshot()['totals']['total_tokens'], 110)
+        parse.assert_not_called()
+        archive = self.home / 'archived_sessions'
+        archive.mkdir()
+        relocated.rename(archive / relocated.name)
+        self.assertEqual(self.monitor.snapshot()['totals']['total_tokens'], 110)
+        self.assertEqual(self.monitor.path_cache['original'][1], (archive / relocated.name).resolve())
+
+    def test_changed_rollout_source_invalidates_resolved_path_cache(self):
+        self.assertEqual(self.monitor.snapshot()['totals']['total_tokens'], 110)
+        replacement = self.home / 'replacement.jsonl'
+        replacement.write_text(json.dumps(record('replacement', 220, thread='original')) + '\n', encoding='utf-8')
+        self.conn.execute('UPDATE threads SET rollout_path=?', (str(replacement),))
+        self.conn.commit()
+        self.assertEqual(self.monitor.snapshot()['totals']['total_tokens'], 220)
+
+    def test_cached_relocated_path_is_rechecked_for_home_containment(self):
+        sessions = self.home / 'sessions'
+        sessions.mkdir()
+        (self.home / 'original.jsonl').rename(sessions / 'rollout-original.jsonl')
+        self.assertEqual(self.monitor.snapshot()['totals']['total_tokens'], 110)
+        cached_path = self.monitor.path_cache['original'][1]
+        external = self.monitor.home.parent / 'outside.jsonl'
+        resolve = Path.resolve
+
+        def moved_outside(path, *args, **kwargs):
+            return external if path == cached_path else resolve(path, *args, **kwargs)
+
+        with (patch.object(Path, 'resolve', autospec=True, side_effect=moved_outside),
+              patch('monitor.parse_records', wraps=parse_records) as parse):
+            data = self.monitor.snapshot()
+        self.assertEqual(data['totals']['total_tokens'], 0)
+        self.assertTrue(data['warnings'])
+        parse.assert_not_called()
+
+    def test_invalid_extended_and_device_paths_are_rejected_before_probe(self):
+        forbidden = ('\\\\?\\UNC\\invalid.example\\share\\log.jsonl', '\\\\?\\C:relative.jsonl',
+                     '\\\\?\\Volume{invalid}\\log.jsonl', '\\\\?\\GLOBALROOT\\Device\\log.jsonl',
+                     '\\\\.\\C:\\log.jsonl', '\\??\\C:\\log.jsonl', '\\Device\\log.jsonl',
+                     '\\\\?\\1:\\log.jsonl', '\\\\?\\C:\\bad\x00.jsonl')
+        resolve = Path.resolve
+        for source in forbidden:
+            with self.subTest(source=source):
+                with (patch.object(Path, 'resolve', autospec=True, side_effect=resolve) as probe,
+                      patch.object(Path, 'rglob', return_value=iter(()))):
+                    data = self.monitor.read_usage({'id': 'original', 'rollout_path': source}, None)
+                self.assertEqual(data['usage']['total_tokens'], 0)
+                self.assertTrue(data['warnings'])
+                self.assertEqual([call.args[0] for call in probe.call_args_list],
+                                 [self.monitor.home / 'sessions', self.monitor.home / 'archived_sessions'])
+
     def test_relative_rollout_path_resolves_under_codex_home(self):
         self.conn.execute("UPDATE threads SET rollout_path='original.jsonl' WHERE id='original'")
         self.conn.commit()
@@ -228,7 +302,10 @@ class DiscoveryTests(unittest.TestCase):
             external = Path(outside) / 'outside.jsonl'
             external.write_text(json.dumps(record('outside', 999, thread='original')) + '\n', encoding='utf-8')
             relative = __import__('os').path.relpath(external, self.home)
-            for path in (str(external), relative, '\\\\invalid.example\\share\\log.jsonl', '//invalid.example/share/log.jsonl'):
+            paths = [str(external), relative, '\\\\invalid.example\\share\\log.jsonl', '//invalid.example/share/log.jsonl']
+            if os.name == 'nt':
+                paths.append('\\\\?\\' + str(external))
+            for path in paths:
                 with self.subTest(path=path):
                     self.conn.execute('UPDATE threads SET rollout_path=?', (path,))
                     self.conn.commit()

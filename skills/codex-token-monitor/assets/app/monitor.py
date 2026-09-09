@@ -61,6 +61,21 @@ def normalized_directory(value):
     return posixpath.normpath(value)
 
 
+def _local_path(value):
+    if not isinstance(value, (str, Path)) or '\x00' in str(value):
+        return None
+    value = str(value)
+    normalized = value.replace('\\', '/')
+    if (normalized.startswith('//?/') and len(normalized) >= 7
+            and normalized[4] in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+            and normalized[5:7] == ':/'):
+        value = value[4:]
+        normalized = normalized[4:]
+    if normalized.startswith('//') or normalized.lower().startswith(('/??/', '/device/')):
+        return None
+    return Path(value)
+
+
 def select_targets(config, rows, edges, cutoff_ms=None):
     excluded = set(config.get('exclude_task_ids', []))
     child_ids = {child for _, child in edges}
@@ -167,31 +182,38 @@ def parse_records(path, thread_id, cutoff=None):
 class Monitor:
     def __init__(self, config):
         self.config = config
-        self.home = Path(config.get('codex_home') or os.environ.get('CODEX_HOME') or
-                         Path.home() / '.codex').expanduser().resolve()
+        home = _local_path(config.get('codex_home') or os.environ.get('CODEX_HOME') or
+                           Path.home() / '.codex')
+        home = _local_path(home.expanduser()) if home is not None else None
+        self.home = _local_path(home.resolve()) if home is not None else None
+        if self.home is None:
+            raise MonitorError('Codex 数据目录必须是有效的本机路径。')
         directory = config.get('project_directory')
         if not isinstance(directory, str) or not directory.strip():
             raise MonitorError('必须指定 project_directory，监控仅统计该项目及其子任务。')
         if not (ntpath.isabs(directory) or posixpath.isabs(directory)):
             raise MonitorError('project_directory 必须使用完整目录路径。')
         self.cache = {}
+        self.path_cache = {}
         self.lock = threading.Lock()
 
     def read_usage(self, row, cutoff):
         try:
             def within_home(value):
                 # Validate before probing a path supplied by the task index.
-                if not isinstance(value, (str, Path)) or '\x00' in str(value):
+                candidate = _local_path(value)
+                if candidate is None:
                     return None
-                if str(value).replace('\\', '/').startswith('//'):
-                    return None
-                candidate = Path(value)
                 if not candidate.is_absolute():
                     candidate = self.home / candidate
-                candidate = candidate.resolve()
-                return candidate if candidate.is_relative_to(self.home) else None
+                candidate = _local_path(candidate.resolve())
+                return candidate if candidate is not None and candidate.is_relative_to(self.home) else None
 
-            path = within_home(row.get('rollout_path') or '')
+            source = row.get('rollout_path') or ''
+            path = within_home(source)
+            if path is None or not path.is_file():
+                cached_path = self.path_cache.get(row['id'])
+                path = within_home(cached_path[1]) if cached_path and cached_path[0] == source else None
             if path is None or not path.is_file():
                 # Relocated homes may retain old paths; only search inside this home.
                 path = None
@@ -212,6 +234,7 @@ class Monitor:
                 if path is None:
                     raise OSError('No task log inside the selected Codex home')
             stat = path.stat()
+            self.path_cache[row['id']] = (source, path)
             signature = (str(path), stat.st_size, stat.st_mtime_ns, cutoff)
             cached = self.cache.get(row['id'])
             if cached and cached[0] == signature:

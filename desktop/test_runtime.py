@@ -166,12 +166,18 @@ class DesktopTests(unittest.TestCase):
 class HttpTests(unittest.TestCase):
     def setUp(self):
         DesktopTests.setUp(self)
+        self.scan_gates = []
         self.server = runtime.create_server(self.state, 0)
         self.worker = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.worker.start()
         self.origin = f'http://127.0.0.1:{self.server.server_port}'
 
     def tearDown(self):
+        for gate in self.scan_gates:
+            gate.set()
+        deadline = time.monotonic() + 3
+        while self.state.scan_running and time.monotonic() < deadline:
+            time.sleep(0.01)
         self.server.shutdown()
         self.server.server_close()
         self.worker.join(timeout=3)
@@ -193,6 +199,30 @@ class HttpTests(unittest.TestCase):
             base.update(headers)
         return self.request('POST', route, json.dumps(payload).encode(), base)
 
+    def poll_usage(self, expected=200):
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline:
+            status, _, body = self.request('GET', '/api/usage')
+            data = json.loads(body)
+            if status == expected and not data.get('refreshing'):
+                return data
+            time.sleep(0.01)
+        self.fail(f'usage did not reach {expected}: {status} {data}')
+
+    def blocked_scan(self, result=None, error=None):
+        entered, release = threading.Event(), threading.Event()
+        self.scan_gates.append(release)
+
+        def scan():
+            entered.set()
+            if not release.wait(5):
+                raise RuntimeError('test scan wait timed out')
+            if error:
+                raise error
+            return result
+
+        return Mock(side_effect=scan), entered, release
+
     def test_setup_api_returns_token_and_usage_requires_selection(self):
         status, _, body = self.request('GET', '/api/setup')
         self.assertEqual(status, 200)
@@ -200,12 +230,122 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(self.request('GET', '/api/usage')[0], 503)
         self.assertEqual(self.post({'project_directory': 'C:/Projects/Alpha'})[0], 200)
         status, _, body = self.request('GET', '/api/usage')
-        self.assertEqual(status, 200)
-        self.assertEqual(json.loads(body)['totals']['total_tokens'], 260)
+        self.assertEqual(status, 202)
+        self.assertEqual(json.loads(body)['status'], 'loading')
+        self.assertEqual(self.poll_usage()['totals']['total_tokens'], 260)
         status, headers, body = self.request('GET', '/api/export.csv')
         self.assertEqual(status, 200)
         self.assertIn('text/csv', headers['Content-Type'])
         self.assertIn(b'190', body)
+
+    def test_slow_initial_scan_is_nonblocking_and_polling_is_single_flight(self):
+        self.state.configure({'project_directory': 'C:/Projects/Alpha'})
+        result = self.state.snapshot()
+        scan, entered, release = self.blocked_scan(result=result)
+        self.state.monitor.snapshot = scan
+        start = time.monotonic()
+        status, _, body = self.request('GET', '/api/usage')
+        self.assertLess(time.monotonic() - start, 1)
+        self.assertEqual(status, 202)
+        self.assertEqual(json.loads(body), {'status': 'loading', 'message': '正在读取历史记录，请稍候…',
+                                           'project_name': 'Alpha'})
+        self.assertTrue(entered.wait(1))
+        for _ in range(4):
+            self.assertEqual(self.request('GET', '/api/usage?refresh=1')[0], 202)
+        self.assertEqual(scan.call_count, 1)
+        start = time.monotonic()
+        self.assertEqual(self.request('GET', '/api/health')[0], 200)
+        self.assertEqual(self.request('GET', '/api/setup')[0], 200)
+        self.assertEqual(self.request('GET', '/api/export.csv')[0], 503)
+        self.assertLess(time.monotonic() - start, 1)
+        release.set()
+        self.assertEqual(self.poll_usage()['totals']['total_tokens'], 260)
+        self.assertEqual(scan.call_count, 1)
+
+    def test_cached_refresh_retains_timestamp_and_default_polling_is_throttled(self):
+        self.state.configure({'project_directory': '/projects/beta'})
+        old = self.state.snapshot()
+        first = Mock(return_value=old)
+        self.state.monitor.snapshot = first
+        self.assertEqual(self.request('GET', '/api/usage')[0], 202)
+        self.assertEqual(self.poll_usage()['generated_at'], old['generated_at'])
+        for _ in range(3):
+            self.assertFalse(json.loads(self.request('GET', '/api/usage')[2])['refreshing'])
+        self.assertEqual(first.call_count, 1)
+        updated = {**old, 'generated_at': '2026-02-02T00:00:00+00:00'}
+        scan, entered, release = self.blocked_scan(result=updated)
+        self.state.monitor.snapshot = scan
+        status, _, body = self.request('GET', '/api/usage?refresh=1')
+        self.assertEqual(status, 200)
+        cached = json.loads(body)
+        self.assertTrue(cached['refreshing'])
+        self.assertEqual(cached['generated_at'], old['generated_at'])
+        self.assertTrue(entered.wait(1))
+        self.assertTrue(json.loads(self.request('GET', '/api/usage')[2])['refreshing'])
+        self.assertEqual(scan.call_count, 1)
+        release.set()
+        self.assertEqual(self.poll_usage()['generated_at'], updated['generated_at'])
+        # Once the configured interval passes, polling starts exactly one more scan.
+        with self.state.lock:
+            self.state.scan_completed_at -= 11
+        self.assertEqual(self.request('GET', '/api/usage')[0], 200)
+        self.poll_usage()
+        self.assertEqual(scan.call_count, 2)
+
+    def test_project_switch_discards_old_scan_without_starting_parallel_work(self):
+        self.state.configure({'project_directory': 'C:/Projects/Alpha'})
+        old = self.state.snapshot()
+        scan, entered, release = self.blocked_scan(result=old)
+        self.state.monitor.snapshot = scan
+        self.assertEqual(self.request('GET', '/api/usage')[0], 202)
+        self.assertTrue(entered.wait(1))
+        start = time.monotonic()
+        self.assertEqual(self.post({'project_directory': '/projects/beta'})[0], 200)
+        self.assertLess(time.monotonic() - start, 1)
+        new_monitor = self.state.monitor
+        current_scan = Mock(wraps=new_monitor.snapshot)
+        new_monitor.snapshot = current_scan
+        for _ in range(3):
+            status, _, body = self.request('GET', '/api/usage')
+            self.assertEqual(status, 202)
+            self.assertEqual(json.loads(body)['project_name'], 'beta')
+            self.assertNotIn('totals', json.loads(body))
+        current_scan.assert_not_called()
+        release.set()
+        result = self.poll_usage()
+        self.assertEqual(result['project_directory'], '/projects/beta')
+        self.assertEqual(result['totals']['total_tokens'], 70)
+        self.assertEqual(scan.call_count, 1)
+        self.assertEqual(current_scan.call_count, 1)
+
+    def test_scan_error_is_visible_and_manual_retry_recovers(self):
+        self.state.configure({'project_directory': '/projects/beta'})
+        result = self.state.snapshot()
+        scan, entered, release = self.blocked_scan(error=runtime.accounting.MonitorError('旧版日志不兼容'))
+        self.state.monitor.snapshot = scan
+        self.assertEqual(self.request('GET', '/api/usage')[0], 202)
+        self.assertTrue(entered.wait(1))
+        release.set()
+        self.assertEqual(self.poll_usage(503), {'error': '旧版日志不兼容'})
+        for _ in range(3):
+            self.assertEqual(self.request('GET', '/api/usage')[0], 503)
+        self.assertEqual(scan.call_count, 1)
+        self.state.monitor.snapshot = Mock(return_value=result)
+        self.assertEqual(self.request('GET', '/api/usage?refresh=1')[0], 202)
+        self.assertEqual(self.poll_usage()['totals']['total_tokens'], 70)
+
+    def test_nonserializable_database_model_reports_error_without_disconnect(self):
+        with closing(sqlite3.connect(self.home / 'state_5.sqlite')) as conn:
+            conn.execute('UPDATE threads SET model = ? WHERE id = ?',
+                         (sqlite3.Binary(b'invalid-model-bytes'), 'root'))
+            conn.commit()
+        self.state.configure({'project_directory': 'C:/Projects/Alpha'})
+        self.assertEqual(self.request('GET', '/api/usage')[0], 202)
+        self.assertEqual(self.poll_usage(503), {'error': '暂时无法读取本地数据，请稍后重试。'})
+        self.assertEqual(self.request('GET', '/api/usage?refresh=1')[0], 202)
+        self.assertEqual(self.poll_usage(503), {'error': '暂时无法读取本地数据，请稍后重试。'})
+        self.assertEqual(self.request('GET', '/api/health')[0], 200)
+        self.assertEqual(self.request('GET', '/api/setup')[0], 200)
 
     def test_write_requires_exact_origin_token_json_and_bounded_body(self):
         payload = {'project_directory': '/projects/beta'}
@@ -308,7 +448,7 @@ class HttpTests(unittest.TestCase):
                 opener.return_value.open.return_value.__enter__.return_value = io.BytesIO(json.dumps(invalid).encode())
                 self.assertIsNone(runtime.existing_url(self.data))
         health = json.loads(self.request('GET', '/api/health')[2])
-        self.assertEqual(health['version'], '0.2.0')
+        self.assertEqual(health['version'], '0.2.1')
 
     def test_quit_replies_before_stopping_own_server(self):
         self.assertEqual(self.post({}, route='/api/quit')[0], 200)
@@ -334,7 +474,7 @@ class LifecycleTests(unittest.TestCase):
                     time.sleep(0.05)
                 self.assertTrue(metadata.is_file())
                 saved = json.loads(metadata.read_text(encoding='utf-8'))
-                self.assertEqual(saved['version'], '0.2.0')
+                self.assertEqual(saved['version'], '0.2.1')
                 repeat = subprocess.run(command, capture_output=True, timeout=8)
                 self.assertEqual(repeat.returncode, 0, repeat.stderr.decode(errors='replace'))
                 self.assertEqual(json.loads(metadata.read_text(encoding='utf-8')), saved)

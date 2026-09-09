@@ -24,7 +24,7 @@ DESKTOP = ROOT / 'desktop'
 sys.path.insert(0, str(APP))
 import monitor as accounting
 APP_ID = 'codex-monitor-fish-desktop'
-VERSION = '0.2.0'
+VERSION = '0.2.1'
 MAX_BODY = 16 * 1024
 
 
@@ -108,6 +108,10 @@ class DesktopState:
         self.monitor = None
         self.config = {}
         self.startup_error = None
+        self.scan_running = False
+        self.scan_completed_at = None
+        self.scan_result = None
+        self.scan_error = None
         try:
             if self.settings_path.is_file():
                 settings = json.loads(self.settings_path.read_text(encoding='utf-8'))
@@ -161,6 +165,7 @@ class DesktopState:
             atomic_json(self.settings_path, config)
             self.config, self.monitor, self.home = config, monitor, home
             self.startup_error = None
+            self.scan_result = self.scan_error = self.scan_completed_at = None
             return {'ok': True, 'project_directory': config['project_directory']}
 
     def snapshot(self):
@@ -169,6 +174,39 @@ class DesktopState:
         if monitor is None:
             raise accounting.MonitorError('请先选择要监控的项目。')
         return monitor.snapshot()
+
+    def _scan_usage(self, monitor):
+        result, error = None, None
+        try:
+            result = monitor.snapshot()
+            json.dumps(result, ensure_ascii=False, allow_nan=False)
+        except Exception as exc:
+            result = None
+            error = str(exc) if isinstance(exc, accounting.MonitorError) else '暂时无法读取本地数据，请稍后重试。'
+        with self.lock:
+            # A completed scan for a previous selection must never reach the new project.
+            if self.monitor is monitor:
+                self.scan_result, self.scan_error = result, error
+                self.scan_completed_at = time.monotonic()
+            self.scan_running = False
+
+    def usage_response(self, refresh=False):
+        """Return promptly while one daemon scans; polling never queues duplicate work."""
+        with self.lock:
+            if self.monitor is None:
+                raise accounting.MonitorError('请先选择要监控的项目。')
+            due = (self.scan_completed_at is None or refresh or
+                   time.monotonic() - self.scan_completed_at >= self.config.get('refresh_seconds', 10))
+            if not self.scan_running and due:
+                self.scan_running = True
+                self.scan_error = None
+                threading.Thread(target=self._scan_usage, args=(self.monitor,), daemon=True).start()
+            if self.scan_error is not None:
+                return 503, {'error': self.scan_error}
+            if self.scan_result is None:
+                return 202, {'status': 'loading', 'message': '正在读取历史记录，请稍候…',
+                             'project_name': self.config.get('project_name') or '当前项目'}
+            return 200, {**self.scan_result, 'refreshing': self.scan_running}
 
 
 def make_handler(state):
@@ -226,9 +264,15 @@ def make_handler(state):
                 elif route.path == '/assets/logo.jpg':
                     self.send_data(200, (APP / 'assets/logo.jpg').read_bytes(), 'image/jpeg')
                 elif route.path == '/api/usage':
-                    self.send_json(200, state.snapshot())
+                    refresh = parse_qs(route.query).get('refresh') == ['1']
+                    status, body = state.usage_response(refresh)
+                    self.send_json(status, body)
                 elif route.path == '/api/export.csv':
-                    self.send_data(200, accounting.csv_bytes(state.snapshot()), 'text/csv; charset=utf-8')
+                    status, body = state.usage_response()
+                    if status == 200:
+                        self.send_data(200, accounting.csv_bytes(body), 'text/csv; charset=utf-8')
+                    else:
+                        self.send_json(503, body if status == 503 else {'error': '历史记录仍在读取，请稍后再导出。'})
                 elif route.path == '/favicon.ico':
                     self.send_data(204, b'', 'image/x-icon')
                 else:

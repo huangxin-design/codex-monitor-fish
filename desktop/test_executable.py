@@ -66,6 +66,16 @@ def main():
             with opener.open(urllib.request.Request(endpoint + route, data=body, headers=headers), timeout=15) as response:
                 return response.read(), response.headers
 
+        def ready_snapshot():
+            deadline = time.monotonic() + 15
+            while time.monotonic() < deadline:
+                payload = json.loads(request('/api/usage')[0])
+                if 'totals' in payload:
+                    return payload
+                assert payload.get('status') == 'loading', payload
+                time.sleep(.05)
+            raise AssertionError('Background scan did not produce a snapshot.')
+
         try:
             deadline = time.monotonic() + 45
             while time.monotonic() < deadline:
@@ -90,7 +100,7 @@ def main():
             assert len(info['projects']) == 2
             assert '选择要监控的项目' in request('/')[0].decode()
             request('/api/setup', {'project_directory': str(project)})
-            snapshot = json.loads(request('/api/usage')[0])
+            snapshot = ready_snapshot()
             assert snapshot['totals']['total_tokens'] == 330
             html = request('/')[0].decode()
             assert 'Codex 监控小鱼' in html and '/desktop.js' in html
@@ -98,7 +108,7 @@ def main():
             assert '切换项目' in request('/desktop.js')[0].decode()
             with subprocess.Popen(command, **kwargs) as second:
                 assert second.wait(timeout=20) == 0
-            assert json.loads(request('/api/usage')[0])['totals']['total_tokens'] == 330
+            assert ready_snapshot()['totals']['total_tokens'] == 330
             after = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in home.iterdir()}
             assert before == after, 'Source records were changed.'
             request('/api/quit', {})
@@ -121,7 +131,7 @@ def main():
                 time.sleep(.2)
             else:
                 raise AssertionError('Restart did not restore the saved project.')
-            assert json.loads(request('/api/usage')[0])['totals']['total_tokens'] == 330
+            assert ready_snapshot()['totals']['total_tokens'] == 330
             request('/api/quit', {})
             assert process.wait(timeout=20) == 0
             print('EXE smoke PASS: no Python PATH; project selection; total330; assets; single instance; readonly source; restart restores selection; graceful quit.')
