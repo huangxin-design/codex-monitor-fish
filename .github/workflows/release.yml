@@ -1,4 +1,4 @@
-name: Build downloadable skill
+name: Build downloadable apps and skill
 
 on:
   push:
@@ -34,5 +34,34 @@ jobs:
           path: |
             dist/codex-token-monitor-skill.zip
             dist/codex-token-monitor-skill.zip.sha256
+          if-no-files-found: error
+          retention-days: 30
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install packaging tools
+        run: python -m pip install -r tooling/requirements-build.txt
+      - name: Test desktop service
+        run: python -B -m unittest discover -s desktop -p "test_runtime.py" -v
+      - name: Audit installer
+        shell: powershell
+        run: ./tests/test_installer.ps1
+      - name: Build EXE
+        run: python tooling/build_windows.py
+      - name: Check EXE from a clean folder
+        run: python desktop/test_executable.py --exe dist/CodexMonitorFish-Windows.exe
+      - uses: actions/upload-artifact@v7
+        with:
+          name: codex-monitor-fish-windows
+          path: |
+            dist/CodexMonitorFish-Windows.exe
+            dist/CodexMonitorFish-Windows.exe.sha256
           if-no-files-found: error
           retention-days: 30

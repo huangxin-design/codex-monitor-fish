@@ -335,7 +335,7 @@ function exportCsv() {
   rows.push(['合计','',scope,'',total.input_tokens,total.cached_input_tokens,Math.max(0,total.input_tokens-total.cached_input_tokens),total.output_tokens,total.reasoning_output_tokens,total.total_tokens,'','']);
   const csvCell = value => {
     let text = String(value ?? '');
-    if (typeof value === 'string' && /^[=+\-@\t\r]/.test(text)) text = "'" + text;
+    if (typeof value === 'string' && (/^\s*[=+\-@]/.test(text) || /^[\t\r\n]/.test(text))) text = "'" + text;
     return '"' + text.replaceAll('"','""') + '"';
   };
   const blob = new Blob(['\ufeff' + rows.map(row => row.map(csvCell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8;'});

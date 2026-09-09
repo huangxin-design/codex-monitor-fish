@@ -1,3 +1,5 @@
+import csv
+import io
 import json
 import sqlite3
 from pathlib import Path
@@ -103,6 +105,23 @@ class UsageTests(unittest.TestCase):
         self.assertTrue(output.startswith(b'\xef\xbb\xbf'))
         self.assertIn("'=1+1", output.decode('utf-8-sig'))
 
+    def test_csv_neutralizes_whitespace_and_all_text_fields(self):
+        usage = zero()
+        for value in ('\t=1+1', '\r=1+1', '\n=1+1', '  =1+1', '@SUM(1)', '+1', '-1'):
+            with self.subTest(value=value):
+                data = {'generated_at': 'now', 'tasks': [{'title': value,
+                    'screenshot_title': value, 'id': value, 'own': usage, 'children': usage, 'usage': usage}]}
+                rows = list(csv.reader(io.StringIO(csv_bytes(data).decode('utf-8-sig'))))
+                self.assertEqual(rows[1][:3], ["'" + value] * 3)
+                self.assertEqual(rows[1][3:10], ['0'] * 7)
+
+    def test_malformed_model_and_deep_json_preserve_valid_usage(self):
+        data = self.parse([{'type': 'turn_context', 'payload': {'model': ['bad']}}, record('valid')],
+                          b'[' * 2000 + b'0' + b']' * 2000 + b'\n')
+        self.assertEqual(data['usage']['total_tokens'], 110)
+        self.assertEqual(data['models'], [])
+        self.assertTrue(data['warnings'])
+
 
 class DiscoveryTests(unittest.TestCase):
     def setUp(self):
@@ -203,6 +222,42 @@ class DiscoveryTests(unittest.TestCase):
         self.conn.execute("UPDATE threads SET rollout_path='original.jsonl' WHERE id='original'")
         self.conn.commit()
         self.assertEqual(self.monitor.snapshot()['totals']['total_tokens'], 110)
+
+    def test_rollout_cannot_escape_home_or_probe_network_path(self):
+        with tempfile.TemporaryDirectory() as outside:
+            external = Path(outside) / 'outside.jsonl'
+            external.write_text(json.dumps(record('outside', 999, thread='original')) + '\n', encoding='utf-8')
+            relative = __import__('os').path.relpath(external, self.home)
+            for path in (str(external), relative, '\\\\invalid.example\\share\\log.jsonl', '//invalid.example/share/log.jsonl'):
+                with self.subTest(path=path):
+                    self.conn.execute('UPDATE threads SET rollout_path=?', (path,))
+                    self.conn.commit()
+                    data = self.monitor.snapshot()
+                    self.assertEqual(data['totals']['total_tokens'], 0)
+                    self.assertTrue(data['warnings'])
+
+    def test_external_old_path_uses_relocated_log_in_home(self):
+        root = self.home / 'sessions'
+        root.mkdir()
+        (self.home / 'original.jsonl').rename(root / 'rollout-original.jsonl')
+        self.conn.execute('UPDATE threads SET rollout_path=?', (str(self.home.parent / 'old-home' / 'original.jsonl'),))
+        self.conn.commit()
+        self.assertEqual(self.monitor.snapshot()['totals']['total_tokens'], 110)
+
+    def test_symlink_log_outside_home_is_ignored(self):
+        with tempfile.TemporaryDirectory() as outside:
+            external = Path(outside) / 'outside.jsonl'
+            external.write_text(json.dumps(record('outside', 999, thread='original')) + '\n', encoding='utf-8')
+            link = self.home / 'linked.jsonl'
+            try:
+                link.symlink_to(external)
+            except OSError:
+                self.skipTest('Creating symlinks is unavailable on this host')
+            self.conn.execute('UPDATE threads SET rollout_path=?', (str(link),))
+            self.conn.commit()
+            data = self.monitor.snapshot()
+            self.assertEqual(data['totals']['total_tokens'], 0)
+            self.assertTrue(data['warnings'])
 
     def test_database_and_rollout_remain_unchanged(self):
         db = self.home / 'state_5.sqlite'

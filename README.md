@@ -2,12 +2,36 @@
   <img src="skills/codex-token-monitor/assets/app/assets/logo.jpg" width="76" height="76" alt="H 品牌标识">
   <h1>Codex 监控小鱼</h1>
   <p>给每一次创作，留下一份看得见的 Token 记录。</p>
-  <p>本地 Codex 项目用量看板 · 黑红主题 · 可分享 Skill</p>
+  <p>给 Codex 一句话，选个项目，就能查看 Token 用量。</p>
 </div>
 
-Codex 监控小鱼读取本机 Codex 项目记录，按任务及子任务统计 Token，自动发现同项目新增任务。通过 Skill 让 Codex 完成配置，之后可以独立运行看板。
+Codex 监控小鱼读取本机 Codex 项目记录，按任务及子任务统计 Token。Windows 版支持由 Codex 自动安装并打开网页，不需要自己安装 Python 或配置 Skill。
 
 本项目是独立社区工具，并非 OpenAI 官方产品。
+
+## 推荐：给 Codex 一句话
+
+在电脑上的 Codex 中发送：
+
+```text
+请按照 https://github.com/huangxin-design/codex-monitor-fish 的 INSTALL.md，自动安装 Codex 监控小鱼并打开项目选择网页，我选好项目后就开始监控 Token。
+```
+
+Codex 会自动下载、校验、安装并打开网页。你只需 **选择项目 → 开始监控**；以后会记住你的选择，再说“打开 Codex 监控小鱼”即可。自动安装目前支持 Windows 10/11 64 位，需要本机有 Codex 使用记录。
+
+部署细节见 [INSTALL.md](INSTALL.md)。下面也保留直接下载的方式。
+
+## 不通过 Codex：下载后双击
+
+### [下载免安装启动版 →](https://github.com/huangxin-design/codex-monitor-fish/releases/latest/download/CodexMonitorFish-Windows.exe)
+
+1. 下载 `CodexMonitorFish-Windows.exe`，双击打开。
+2. 网页自动弹出，选择一个项目，点 **开始监控**。
+3. 下次双击直接进入看板；网页中可 **切换项目** 或 **退出监控**。
+
+适用于 Windows 10/11 64 位，需要这台电脑上有 Codex 使用记录。程序自带运行环境，无需管理员权限。当前版本未做代码签名，Windows 可能显示发布者无法验证的提示。
+
+![首次选择项目，模拟数据](docs/images/setup.png)
 
 ![Codex 监控小鱼桌面预览，全部为模拟演示数据](docs/images/desktop.png)
 
@@ -21,6 +45,9 @@ Codex 监控小鱼读取本机 Codex 项目记录，按任务及子任务统计 
 - **H 品牌标识与个人头像**：左侧固定 H 标识；右侧点击更换自己的头像。
 - **桌面与窄屏**：大屏表格，窄屏任务卡片，合计始终可见。
 - **本地运行**：Python 标准库，无 API Key、无第三方运行依赖，监听 `127.0.0.1`。
+
+<details>
+<summary>进阶方式：安装 Skill（macOS / Linux 或需要由 Codex 配置时）</summary>
 
 ## 安装 Skill
 
@@ -44,6 +71,11 @@ Codex 监控小鱼读取本机 Codex 项目记录，按任务及子任务统计 
 Codex 会配置项目范围与本机数据位置、校验记录，并打开本地页面。不要在 Skill 的模板目录里直接运行服务；首次生成的监控目录才是日常使用的应用。
 
 更多说明见 [朋友使用指南](docs/使用说明.md)。
+
+</details>
+
+<details>
+<summary>开发者方式：Python 启动与配置参数</summary>
 
 ## 不通过 Skill 运行
 
@@ -76,6 +108,8 @@ py -3 "D:\My Projects\Demo\codex-monitor-fish\launch.py"
 
 右侧头像还可直接点击上传，最大 2 MB，保存在当前浏览器；换浏览器或端口后需重新选择。左侧品牌图保持不变。
 
+</details>
+
 ## 统计口径与兼容性
 
 **这是本机日志可见的历史 Token 处理量，不是订阅剩余额度，也不是计费账单。** 缓存输入已包含在输入中，推理输出已包含在输出中，不能再次相加。图片、视频等外部工具费用不在统计范围。
@@ -95,6 +129,10 @@ Windows 已进行真实启动、浏览器和头像交互验证。macOS/Linux 路
 
 生成的配置、快照、CSV、日志、截图可能包含使用者的任务名称和本机路径，请勿提交到公共仓库。仓库的忽略规则与发布脚本会排除运行产物；用于展示的截图均为模拟数据。头像选择保存在浏览器本地。
 
+Windows 启动版把项目选择保存在 `%LOCALAPPDATA%\CodexMonitorFish`；它不会安装 Skill、添加开机启动项或改写 Codex 的原始记录。退出后不再后台读取数据。
+
+SQLite 在读取正在使用的数据库时可能创建共享内存辅助文件（`-shm`）；程序不执行数据库写入语句，也不改动会话日志。安全检查与已知限制见 [对抗性审核记录](docs/安全审核.md)。
+
 ## 开发与发布
 
 运行后端及初始化测试：
@@ -102,7 +140,10 @@ Windows 已进行真实启动、浏览器和头像交互验证。macOS/Linux 路
 ```text
 python -m unittest discover -s skills/codex-token-monitor/assets/app -p "test_*.py"
 python -m unittest discover -s tests -p "test_*.py"
+python -m unittest discover -s desktop -p "test_runtime.py"
 ```
+
+Windows 安装器的离线对抗测试：`powershell.exe -NoProfile -File tests/test_installer.ps1`。也可用 PowerShell 7 运行同一文件。
 
 构建独立 Skill 包：
 
@@ -111,6 +152,16 @@ python tooling/build_release.py
 ```
 
 输出位于 `dist/`，包含 Skill ZIP 与 SHA-256 校验文件。GitHub Actions 会在提交和拉取请求时运行测试并验证打包；实际 CI 结果以仓库运行记录为准。
+
+在 Windows 构建免安装 EXE（仅开发者需要打包工具）：
+
+```text
+python -m pip install -r tooling/requirements-build.txt
+python tooling/build_windows.py
+python desktop/test_executable.py --exe dist/CodexMonitorFish-Windows.exe
+```
+
+EXE 内含 Python 与 PyInstaller 引导程序的许可证声明。免安装启动版仅提供 Windows 64 位；其他平台目前使用 Skill 或源码方式。
 
 提交问题或贡献前，请阅读 [贡献说明](CONTRIBUTING.md) 和 [问题报告说明](SECURITY.md)。
 

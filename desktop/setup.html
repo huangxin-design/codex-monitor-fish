@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>选择项目 · Codex 监控小鱼</title>
+  <link rel="icon" type="image/jpeg" href="/assets/logo.jpg">
+  <style>
+    :root{color-scheme:dark;--paper:#090809;--surface:#171216;--ink:#f5eff0;--muted:#b0a3aa;--line:#ffffff14;--accent:#ff8090}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 85% 0,#63122625,transparent 60%),var(--paper);color:var(--ink);font-family:"Segoe UI","Microsoft YaHei",sans-serif;line-height:1.65;-webkit-font-smoothing:antialiased}button,input{font:inherit}button{cursor:pointer}button:disabled{opacity:.5;cursor:default}button:focus-visible,input:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid #ff9ca8;outline-offset:4px}[hidden]{display:none!important}
+    main{width:min(760px,100%);margin:0 auto;padding:36px 28px 40px}.brand{display:flex;align-items:center;gap:11px;font-size:15px;font-weight:600;padding-bottom:26px;border-bottom:1px solid var(--line)}.brand img{width:34px;height:34px;border-radius:10px;border:1px solid #ffffff21;box-shadow:0 0 18px #b501041a}.brand span{margin-left:auto;color:#ac949e;font-size:11px;font-weight:400;letter-spacing:.13em}.heading{padding:42px 0 28px}.eyebrow{margin:0 0 9px;color:var(--accent);font-size:11px;letter-spacing:.13em}.heading h1{font-size:32px;font-weight:600;line-height:1.4;letter-spacing:-.045em;margin:0}.heading p:last-child{margin:9px 0 0;color:var(--muted);font-size:14px}
+    fieldset{border:0;margin:0;padding:0;min-width:0}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}.project-list{display:grid;gap:10px}.project-option{position:relative;display:flex;align-items:center;gap:15px;padding:19px 20px;border:1px solid var(--line);border-radius:15px;background:linear-gradient(115deg,#1b161b,#120f12);cursor:pointer;transition:border-color .18s,background .18s,box-shadow .18s}.project-option:hover{border-color:#ffffff35;background:#22171d}.project-option:has(input:checked){background:linear-gradient(115deg,#34141f,#1d1118);border-color:#d6425e99;box-shadow:inset 0 1px #ff97ab0d,0 3px 20px #8b00131a}.project-option:has(input:focus-visible){outline:2px solid #ff9ca8;outline-offset:3px}.project-option input{appearance:none;width:19px;height:19px;min-width:19px;margin:0;border:1px solid #78636d;border-radius:50%;background:#100d10}.project-option input:checked{border:5px solid #f24965;background:#fff0f3}.project-copy{min-width:0;flex:1}.project-name{display:block;font-size:16px;font-weight:600;line-height:1.5;overflow-wrap:anywhere}.project-path{display:block;color:#ae97a2;font-size:12px;margin-top:4px;overflow-wrap:anywhere;line-height:1.65}.project-count{flex-shrink:0;font-size:12px;color:#c4abb6;border:1px solid #ffffff10;background:#ffffff04;padding:3px 9px;border-radius:20px}.message{font-size:14px;color:var(--muted);padding:27px 23px;border:1px dashed #ffffff21;border-radius:15px;background:#ffffff02;margin:0}.error{margin:14px 0 0;padding:12px 15px;color:#ffb6c3;font-size:13px;line-height:1.75;border:1px solid #c3395659;border-radius:10px;background:#44122352;overflow-wrap:anywhere}
+    .actions{display:flex;align-items:center;gap:15px;margin-top:24px}.primary{display:inline-flex;align-items:center;justify-content:center;gap:9px;border:1px solid #f5475b87;border-radius:26px;background:linear-gradient(180deg,#e51b32,#b6041b);box-shadow:inset 0 1px #ffb9c459,0 5px 24px #d006262b;padding:12px 24px;min-height:48px;color:#fff;font-size:14px;font-weight:500;transition:filter .18s}.primary:not(:disabled):hover{filter:brightness(1.15)}.primary svg{width:17px;height:17px}.actions p{font-size:12px;color:#9d8994;margin:0}.secondary{border:1px solid #ffffff23;border-radius:10px;background:#ffffff06;color:#e3d5dc;padding:10px 16px;min-height:45px;font-size:13px}.secondary:not(:disabled):hover{background:#ffffff10}.advanced{margin-top:33px;padding-top:22px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}.advanced summary{cursor:pointer;width:fit-content;max-width:100%;color:#c2adb7;padding:3px 0}.advanced p{margin:14px 0 12px;font-size:12px;line-height:1.8;max-width:580px}.advanced label{display:block;font-size:12px;color:#d7c6ce;margin-bottom:6px}.path-field{display:flex;gap:9px}.path-field input{width:100%;min-width:0;flex:1;background:#171217;border:1px solid #ffffff21;border-radius:10px;padding:10px 12px;color:#f4e8ee;font-size:13px}.path-field button{white-space:nowrap}.footnote{display:flex;align-items:center;gap:7px;color:#85747d;font-size:11px;margin:30px 0 0}.footnote svg{width:13px;height:13px;flex-shrink:0}
+    @media(max-width:520px){main{padding:22px 20px 30px}.brand{font-size:14px;padding-bottom:21px}.brand span{display:none}.heading{padding:32px 0 23px}.heading h1{font-size:27px}.heading p:last-child{font-size:13px}.project-option{padding:16px 14px;gap:11px;flex-wrap:wrap}.project-copy{width:calc(100% - 30px)}.project-name{font-size:15px}.project-path{font-size:11px}.project-count{margin-left:30px;font-size:11px}.actions{align-items:stretch;flex-direction:column;gap:10px}.actions p{text-align:center}.path-field{flex-direction:column}.advanced{margin-top:26px}.footnote{align-items:flex-start;line-height:1.8}}
+    @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  </style>
+</head>
+<body>
+  <main>
+    <header class="brand"><img src="/assets/logo.jpg" alt="H 品牌标识" width="34" height="34">Codex 监控小鱼<span>TOKEN MONITOR</span></header>
+    <section class="heading" aria-labelledby="setup-title">
+      <p class="eyebrow">让每一次创作，都有迹可循</p>
+      <h1 id="setup-title">选择要监控的项目</h1>
+      <p>选一次，之后打开自动进入。</p>
+    </section>
+    <form id="setup-form">
+      <fieldset id="project-options" aria-describedby="project-message">
+        <legend class="sr-only">选择一个项目</legend>
+        <div class="project-list" id="projects"></div>
+        <p class="message" id="project-message" role="status">正在查找你用过的项目…</p>
+      </fieldset>
+      <p class="error" id="setup-error" role="alert" hidden></p>
+      <div class="actions">
+        <button class="primary" id="start-monitor" type="submit" disabled><span id="start-label">开始监控</span><svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 10h11M10 5l5 5-5 5"/></svg></button>
+        <p>可随时在监控页面切换项目</p>
+      </div>
+    </form>
+    <details class="advanced" id="advanced">
+      <summary>没有找到项目？</summary>
+      <p>先在 Codex 中打开项目并开始一次任务，然后重新查找。如果你的使用记录放在其他位置，也可以修改下面的目录。</p>
+      <label for="codex-home">使用记录所在目录</label>
+      <div class="path-field"><input id="codex-home" type="text" spellcheck="false" autocomplete="off" placeholder="留空则自动查找"><button class="secondary" id="rediscover" type="button">重新查找</button></div>
+    </details>
+    <p class="footnote"><svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="m8 1 5 2v4c0 3-2.5 5.5-5 7-2.5-1.5-5-4-5-7V3z"/><path d="m5.5 7.5 1.5 1.5 3.5-3.5"/></svg>仅读取本机使用记录，监控数据留在你的电脑。</p>
+  </main>
+  <script src="/setup.js"></script>
+</body>
+</html>

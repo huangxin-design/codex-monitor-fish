@@ -96,7 +96,7 @@ def parse_records(path, thread_id, cutoff=None):
                 continue  # Active writers may not have completed the last record.
             try:
                 item = json.loads(raw)
-            except (ValueError, UnicodeDecodeError):
+            except (ValueError, UnicodeDecodeError, RecursionError):
                 malformed += 1
                 continue
             if not isinstance(item, dict) or not isinstance(item.get('payload', {}), dict):
@@ -107,7 +107,11 @@ def parse_records(path, thread_id, cutoff=None):
             if kind == 'event_msg' and payload.get('type') == 'token_count':
                 legacy_records = True
             if kind == 'turn_context':
-                model = payload.get('model', model)
+                candidate = payload.get('model', model)
+                if isinstance(candidate, str):
+                    model = candidate
+                elif candidate is not None:
+                    malformed += 1
             if kind != 'token_usage_record' or payload.get('thread_id') != thread_id:
                 continue
             own_records = True
@@ -174,17 +178,39 @@ class Monitor:
         self.lock = threading.Lock()
 
     def read_usage(self, row, cutoff):
-        path = Path(row.get('rollout_path') or '')
-        if not path.is_absolute():
-            path = self.home / path
-        if not path.exists():
-            # Relocated Codex homes can retain historical absolute paths.
-            for folder in ('sessions', 'archived_sessions'):
-                candidates = list((self.home / folder).rglob(f'*{row["id"]}.jsonl'))
-                if candidates:
-                    path = candidates[0]
-                    break
         try:
+            def within_home(value):
+                # Validate before probing a path supplied by the task index.
+                if not isinstance(value, (str, Path)) or '\x00' in str(value):
+                    return None
+                if str(value).replace('\\', '/').startswith('//'):
+                    return None
+                candidate = Path(value)
+                if not candidate.is_absolute():
+                    candidate = self.home / candidate
+                candidate = candidate.resolve()
+                return candidate if candidate.is_relative_to(self.home) else None
+
+            path = within_home(row.get('rollout_path') or '')
+            if path is None or not path.is_file():
+                # Relocated homes may retain old paths; only search inside this home.
+                path = None
+                ident = row['id']
+                if isinstance(ident, str) and ident and not any(c in ident for c in '/\\\x00'):
+                    for folder in ('sessions', 'archived_sessions'):
+                        root = within_home(folder)
+                        if root is None:
+                            continue
+                        for candidate in root.rglob('*.jsonl'):
+                            if candidate.name.endswith(ident + '.jsonl'):
+                                candidate = within_home(candidate)
+                                if candidate is not None and candidate.is_file():
+                                    path = candidate
+                                    break
+                        if path is not None:
+                            break
+                if path is None:
+                    raise OSError('No task log inside the selected Codex home')
             stat = path.stat()
             signature = (str(path), stat.st_size, stat.st_mtime_ns, cutoff)
             cached = self.cache.get(row['id'])
@@ -193,7 +219,9 @@ class Monitor:
             data = parse_records(path, row['id'], cutoff)
             self.cache[row['id']] = (signature, data)
             return data
-        except OSError:
+        except MonitorError:
+            raise
+        except (OSError, ValueError, RuntimeError):
             return {'usage': zero(), 'response_count': 0, 'last_activity': None,
                     'daily': {}, 'models': [], 'warnings': ['无法读取该任务日志，未纳入消耗；总数不完整。']}
 
@@ -306,8 +334,10 @@ def csv_bytes(data):
                      '合计Token', '输入Token', '其中缓存输入', '输出Token', '其中推理输出', '统计时间'])
     for task in data['tasks']:
         def safe(value):
-            return "'" + value if value.startswith(('=', '+', '-', '@')) else value
-        writer.writerow([safe(task['title']), safe(task['screenshot_title']), task['id'],
+            value = str(value)
+            return "'" + value if (value.lstrip().startswith(('=', '+', '-', '@'))
+                                   or value.startswith(('\t', '\r', '\n'))) else value
+        writer.writerow([safe(task['title']), safe(task['screenshot_title']), safe(task['id']),
                          task['own']['total_tokens'], task['children']['total_tokens'],
                          task['usage']['total_tokens'], task['usage']['input_tokens'],
                          task['usage']['cached_input_tokens'], task['usage']['output_tokens'],
