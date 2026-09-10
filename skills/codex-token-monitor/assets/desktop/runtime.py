@@ -25,7 +25,7 @@ DESKTOP = ROOT / 'desktop'
 sys.path.insert(0, str(APP))
 import monitor as accounting
 APP_ID = 'codex-monitor-fish-desktop'
-VERSION = '0.2.3'
+VERSION = '0.2.4'
 MAX_BODY = 16 * 1024
 
 

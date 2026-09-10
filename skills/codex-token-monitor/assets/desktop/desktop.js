@@ -46,7 +46,7 @@
       switchProject.setAttribute('aria-disabled', 'true');
       switchProject.style.opacity = '.5';
       quit.textContent = '已退出';
-      document.getElementById('status-text').textContent = '监控已退出，下次双击程序即可重新打开';
+      document.getElementById('status-text').textContent = '监控已退出。可让 Codex 重新打开监控网页。';
       document.getElementById('status').dataset.state = 'paused';
     } catch (error) {
       quit.disabled = false;
