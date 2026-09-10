@@ -12,10 +12,10 @@ def main():
     if sys.platform != 'win32':
         raise SystemExit('Build the Windows executable on Windows.')
     app = ROOT / 'skills/codex-token-monitor/assets/app'
-    desktop = ROOT / 'desktop'
+    desktop = ROOT / 'skills/codex-token-monitor/assets/desktop'
     args = [sys.executable, '-m', 'PyInstaller', '--noconfirm', '--clean', '--onefile',
             '--windowed', '--noupx', '--name', 'CodexMonitorFish-Windows',
-            '--icon', str(desktop / 'app.ico'),
+            '--icon', str(ROOT / 'desktop/app.ico'),
             '--distpath', str(ROOT / 'dist'), '--workpath', str(ROOT / 'build/windows'),
             '--specpath', str(ROOT / 'build'), '--paths', str(app)]
     for source, target in (

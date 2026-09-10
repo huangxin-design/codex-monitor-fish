@@ -5,31 +5,23 @@
   <p>给 Codex 一句话，选个项目，就能查看 Token 用量。</p>
 </div>
 
-Codex 监控小鱼读取本机 Codex 项目记录，按任务及子任务统计 Token。Windows 版支持由 Codex 自动安装并打开网页，不需要自己安装 Python 或配置 Skill。
+Codex 监控小鱼是一个 **Codex Skill**：由 Codex 安装并启动本地网页，用户在网页选择项目，持续查看任务与子任务的 Token 用量。你和朋友都无需手动下载程序、复制文件夹或输入命令。
 
 本项目是独立社区工具，并非 OpenAI 官方产品。
 
-## 推荐：给 Codex 一句话
+## 发给朋友的一段话
 
-在电脑上的 Codex 中发送：
+让朋友把下面这段话发给自己电脑上的 Codex：
 
 ```text
-请按照 https://github.com/huangxin-design/codex-monitor-fish 的 INSTALL.md，自动安装 Codex 监控小鱼并打开项目选择网页，我选好项目后就开始监控 Token。
+请从 https://github.com/huangxin-design/codex-monitor-fish 安装 skills/codex-token-monitor 这个 Skill，安装后立即读取它的 SKILL.md 并继续执行，打开项目选择网页，我选好项目后就开始监控 Token。请复用本机或 Codex 提供的 Python 运行时，帮我完成安装和启动，不要让我手动下载、输入命令或安装 EXE。
 ```
 
-Codex 会自动下载、校验、安装并打开网页。你只需 **选择项目 → 开始监控**；以后会记住你的选择，再说“打开 Codex 监控小鱼”即可。自动安装目前支持 Windows 10/11 64 位，需要本机有 Codex 使用记录。
+流程是 **发送这段话 → Codex 打开网页 → 选择项目 → 开始监控**。以后说“用 $codex-token-monitor 打开监控网页”即可；它会记住上次的项目。需要重新选择时说“打开 Codex 监控小鱼的项目选择页”。
 
-部署细节见 [INSTALL.md](INSTALL.md)。下面也保留直接下载的方式。
+安装和运行需要仓库可访问、本机有 Codex 使用记录，以及可用的 Python 3.10+。运行时由 Codex 查找系统或宿主提供的版本，程序只使用标准库，无需 API Key 或 pip 包。若远程仓库不可访问，Codex 应明确报告安装尚未完成，不能把 GitHub 链接当作已运行的监控网页。
 
-## 不通过 Codex：下载后双击
-
-### [下载免安装启动版 →](https://github.com/huangxin-design/codex-monitor-fish/releases/latest/download/CodexMonitorFish-Windows.exe)
-
-1. 下载 `CodexMonitorFish-Windows.exe`，双击打开。
-2. 网页自动弹出，选择一个项目，点 **开始监控**。
-3. 下次双击直接进入看板；网页中可 **切换项目** 或 **退出监控**。
-
-适用于 Windows 10/11 64 位，需要这台电脑上有 Codex 使用记录。程序自带运行环境，无需管理员权限。当前版本未做代码签名，Windows 可能显示发布者无法验证的提示。
+给 Codex 的执行说明见 [INSTALL.md](INSTALL.md)，日常操作见 [朋友使用指南](docs/使用说明.md)。
 
 ![首次选择项目，模拟数据](docs/images/setup.png)
 
@@ -42,7 +34,7 @@ Codex 会自动下载、校验、安装并打开网页。你只需 **选择项�
 - **按项目统计**：任务本体与子任务分别显示，归档后保留历史用量。
 - **可核对的数字**：区分输入、缓存、输出与推理，支持亿/完整整数，CSV 导出保留整数。
 - **持续更新**：默认每 10 秒刷新；支持暂停、立即刷新、排序与展开任务详情。
-- **边读边看**：Windows 启动版显示真实读取进度、记录份数和当前任务；读完一个任务就先显示一个，等待期间仍可切换项目。
+- **边读边看**：显示真实读取进度、记录份数和当前任务；读完一个任务就先显示一个，等待期间仍可切换项目。
 - **旧记录不挡住整个页面**：无法准确统计的任务单独说明原因；其他任务继续显示，缺失用量不会冒充 0。
 - **H 品牌标识与个人头像**：左侧固定 H 标识；右侧点击更换自己的头像。
 - **桌面与窄屏**：大屏表格，窄屏任务卡片，合计始终可见。
@@ -56,30 +48,22 @@ Codex 会自动下载、校验、安装并打开网页。你只需 **选择项�
 </details>
 
 <details>
-<summary>进阶方式：安装 Skill（macOS / Linux 或需要由 Codex 配置时）</summary>
+<summary>安装位置与运行条件</summary>
 
-## 安装 Skill
+完整 Skill 的源目录为 `skills/codex-token-monitor`。Codex 优先使用可用的 `skill-installer` 从 GitHub 安装；个人目录通常是 Windows 的 `%USERPROFILE%\.agents\skills\codex-token-monitor` 或 macOS/Linux 的 `~/.agents/skills/codex-token-monitor`。目录和自动发现方式参见 [OpenAI 官方文档](https://learn.chatgpt.com/docs/build-skills)。
 
-需要本机 Codex 使用记录及 **Python 3.10+**。这不是上传到普通网页聊天就能读取电脑记录的云端工具。
+Skill 自带解析器、服务与网页，首次启动自动发现本机项目，不需要提前扫描完所有历史。设置保存在 Windows 的 `%LOCALAPPDATA%\CodexMonitorFishSkill` 或 macOS/Linux 的 `~/.local/share/CodexMonitorFishSkill`，运行产物与 Skill 文件分开。同一后台实例会复用；默认端口被占用时自动换端口。
 
-1. 下载本仓库源码，或使用打包得到的 `codex-token-monitor-skill.zip`。
-2. 将完整的 `skills/codex-token-monitor` 文件夹（独立 Skill 压缩包中直接为 `codex-token-monitor`）放入个人 `.agents/skills/` 目录：
+它在用户电脑上运行，需要本机 Codex 使用记录和 Python 3.10+；普通云端聊天网页无法读取电脑记录。缺少运行时或下载失败时，应如实说明实际缺项。已经有完整本地 Skill 的用户，也可让 Codex 直接安装那一份。
 
-   | 系统 | 安装位置 |
-   | --- | --- |
-   | Windows | `%USERPROFILE%\.agents\skills\codex-token-monitor` |
-   | macOS / Linux | `~/.agents/skills/codex-token-monitor` |
+</details>
 
-   也可安装到目标项目的 `.agents/skills/`，仅对该项目使用。目录及自动发现方式参见 [OpenAI 官方文档](https://learn.chatgpt.com/docs/build-skills)。如果没有出现，重启 Codex。
-3. 在 Codex 中打开想统计的项目，发送：
+<details>
+<summary>兼容：原 Windows 独立程序</summary>
 
-   ```text
-   使用 $codex-token-monitor，帮我为当前项目生成 Codex 监控小鱼，并打开页面。
-   ```
+之前使用 EXE 的用户可继续双击已有程序，项目设置仍保存在 `%LOCALAPPDATA%\CodexMonitorFish`。新 Skill 使用独立数据目录，不覆盖原安装。
 
-Codex 会配置项目范围与本机数据位置、校验记录，并打开本地页面。不要在 Skill 的模板目录里直接运行服务；首次生成的监控目录才是日常使用的应用。
-
-更多说明见 [朋友使用指南](docs/使用说明.md)。
+只有明确需要独立程序时，才使用 [Windows 免安装启动版](https://github.com/huangxin-design/codex-monitor-fish/releases/latest/download/CodexMonitorFish-Windows.exe)。它适用于 Windows 10/11 64 位，自带运行环境；当前未做代码签名。Skill 安装不需要下载它。
 
 </details>
 
@@ -138,7 +122,7 @@ Windows 已进行真实启动、浏览器和头像交互验证。macOS/Linux 路
 
 生成的配置、快照、CSV、日志、截图可能包含使用者的任务名称和本机路径，请勿提交到公共仓库。仓库的忽略规则与发布脚本会排除运行产物；用于展示的截图均为模拟数据。头像选择保存在浏览器本地。
 
-Windows 启动版把项目选择保存在 `%LOCALAPPDATA%\CodexMonitorFish`；它不会安装 Skill、添加开机启动项或改写 Codex 的原始记录。退出后不再后台读取数据。
+Skill 把项目选择保存在 `%LOCALAPPDATA%\CodexMonitorFishSkill` 或 `~/.local/share/CodexMonitorFishSkill`；不会添加开机启动项或改写 Codex 的原始记录。退出后不再后台读取数据。
 
 SQLite 在读取正在使用的数据库时可能创建共享内存辅助文件（`-shm`）；程序不执行数据库写入语句，也不改动会话日志。安全检查与已知限制见 [对抗性审核记录](docs/安全审核.md)。
 
