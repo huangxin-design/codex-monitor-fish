@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="skills/codex-token-monitor/assets/app/assets/logo.jpg" width="76" height="76" alt="H 品牌标识">
+  <img src="https://github.com/user-attachments/assets/3b64cc5e-c18b-4941-8929-5831eabfbd1f" width="76" height="76" alt="H 品牌标识">
   <h1>Codex 监控小鱼</h1>
   <p>给每一次创作，留下一份看得见的 Token 记录。</p>
   <p>给 Codex 一句话，选个项目，就能查看 Token 用量。</p>
@@ -23,9 +23,9 @@ Codex 监控小鱼是一个 **Codex Skill**：由 Codex 安装并启动本地网
 
 给 Codex 的执行说明见 [INSTALL.md](INSTALL.md)，日常操作见 [朋友使用指南](docs/使用说明.md)。
 
-![首次选择项目，模拟数据](docs/images/setup.png)
+![首次选择项目，模拟数据](https://github.com/user-attachments/assets/7b68776d-a196-4daa-a2c4-8db4fbc05cd2)
 
-![Codex 监控小鱼桌面预览，全部为模拟演示数据](docs/images/desktop.png)
+![Codex 监控小鱼桌面预览，全部为模拟演示数据](https://github.com/user-attachments/assets/d9e732bc-7221-45c7-9a2a-618b0cd71244)
 
 > 截图使用模拟数据，不含真实用户的任务、路径或用量。
 
@@ -43,7 +43,7 @@ Codex 监控小鱼是一个 **Codex Skill**：由 Codex 安装并启动本地网
 <details>
 <summary>查看逐步读取的效果（模拟数据）</summary>
 
-![读取进度与逐个加入的任务，全部为模拟数据](docs/images/progress.png)
+![读取进度与逐个加入的任务，全部为模拟数据](https://github.com/user-attachments/assets/17a05bfc-1957-4905-90c8-8b232d8c52cd)
 
 </details>
 
