@@ -15,6 +15,8 @@ from contextlib import closing
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+from pricing import PRICING, add_costs, response_cost, zero_cost
+
 BASE = Path(__file__).resolve().parent
 FIELDS = ('input_tokens', 'cached_input_tokens', 'output_tokens',
           'reasoning_output_tokens', 'total_tokens')
@@ -98,7 +100,7 @@ def select_targets(config, rows, edges, cutoff_ms=None):
 def parse_records(path, thread_id, cutoff=None, progress=None):
     """Sum per-response usage, never cumulative counters or inherited history."""
     result = {'usage': zero(), 'response_count': 0, 'last_activity': None,
-              'daily': {}, 'warnings': [], 'models': []}
+              'daily': {}, 'warnings': [], 'models': [], 'cost': zero_cost()}
     seen = set()
     model = None
     malformed = 0
@@ -135,7 +137,8 @@ def parse_records(path, thread_id, cutoff=None, progress=None):
             if kind == 'event_msg' and payload.get('type') == 'token_count':
                 legacy_records = True
             if kind == 'turn_context':
-                candidate = payload.get('model', model)
+                candidate = payload.get('model')
+                model = None
                 if isinstance(candidate, str):
                     model = candidate
                 elif candidate is not None:
@@ -174,12 +177,14 @@ def parse_records(path, thread_id, cutoff=None, progress=None):
             seen.add(response_id)
             result['usage'] = add(result['usage'], usage)
             result['response_count'] += 1
+            request_model = payload.get('model', model)
+            result['cost'] = add_costs(result['cost'], response_cost(usage))
             if recorded_at:
                 result['last_activity'] = max(result['last_activity'] or '', stamp)
                 day = recorded_at.astimezone().date().isoformat()
                 result['daily'][day] = result['daily'].get(day, 0) + usage['total_tokens']
-            if model and model not in result['models']:
-                result['models'].append(model)
+            if isinstance(request_model, str) and request_model and request_model not in result['models']:
+                result['models'].append(request_model)
         if progress is not None:
             progress(consumed, max(size, consumed))
     if malformed:
@@ -197,6 +202,7 @@ def parse_records(path, thread_id, cutoff=None, progress=None):
         result['warnings'].append('尚无可统计的逐次请求记录；显示 0 不代表确认没有消耗。')
         result['unavailable'] = True
     result['warnings'] = list(dict.fromkeys(result['warnings']))
+    result['cost']['incomplete'] |= bool(result.get('unavailable'))
     return result
 
 
@@ -279,7 +285,7 @@ class Monitor:
                 if callback_failed:
                     raise
                 data = {'usage': zero(), 'response_count': 0, 'last_activity': None,
-                        'daily': {}, 'models': [], 'unavailable': True,
+                        'daily': {}, 'models': [], 'unavailable': True, 'cost': zero_cost(incomplete=True),
                         'warnings': ['该任务用量无法确认，未纳入已确认总计：' + str(exc)]}
             self.cache[row['id']] = (signature, data)
             return data
@@ -289,7 +295,7 @@ class Monitor:
             if callback_failed:
                 raise
             return {'usage': zero(), 'response_count': 0, 'last_activity': None,
-                    'daily': {}, 'models': [], 'unavailable': True,
+                    'daily': {}, 'models': [], 'unavailable': True, 'cost': zero_cost(incomplete=True),
                     'warnings': ['无法读取该任务日志，用量无法确认，未纳入已确认总计。']}
 
     def snapshot(self, cutoff=None, progress=None):
@@ -368,6 +374,7 @@ class Monitor:
             state['current_task'] = str(title)
             emit()
             own, children = zero(), zero()
+            own_cost, children_cost = zero_cost(), zero_cost()
             unavailable_logs = 0
             own_unavailable = children_unavailable = False
             task_warnings, models = [], []
@@ -397,8 +404,10 @@ class Monitor:
                         children_unavailable = True
                 if ident == root:
                     own = data['usage']
+                    own_cost = data['cost']
                 else:
                     children = add(children, data['usage'])
+                    children_cost = add_costs(children_cost, data['cost'])
                 response_count += data['response_count']
                 task_warnings.extend(data['warnings'])
                 models.extend(data['models'])
@@ -410,11 +419,15 @@ class Monitor:
                 state['log_bytes_done'] = state['log_bytes_total'] = 0
                 emit()
             row = rows.get(root, {})
+            own_cost = {**own_cost, 'incomplete': own_cost['incomplete'] or own_unavailable}
+            children_cost = {**children_cost, 'incomplete': children_cost['incomplete'] or children_unavailable}
             tasks.append({
                 'id': root, 'title': title,
                 'screenshot_title': target.get('screenshot_title', ''),
                 'archived': bool(row.get('archived')),
                 'own': own, 'children': children, 'usage': add(own, children),
+                'self_cost': own_cost, 'children_cost': children_cost,
+                'total_cost': add_costs(own_cost, children_cost),
                 'unavailable_logs': unavailable_logs, 'own_unavailable': own_unavailable,
                 'children_unavailable': children_unavailable,
                 'child_count': len(members) - 1, 'response_count': response_count,
@@ -448,6 +461,10 @@ class Monitor:
             'project_directory': self.config.get('project_directory'),
             'project_name': self.config.get('project_name') or Path(self.config['project_directory']).name,
             'tasks': tasks, 'totals': add(*(t['usage'] for t in tasks)),
+            'cost_totals': {'self': add_costs(*(t['self_cost'] for t in tasks)),
+                            'children': add_costs(*(t['children_cost'] for t in tasks)),
+                            'total': add_costs(*(t['total_cost'] for t in tasks))},
+            'cost_pricing': dict(PRICING),
             'incomplete': incomplete,
             'daily': [{'date': day, 'total_tokens': amount} for day, amount in sorted(daily.items())],
             'warnings': warnings,
@@ -459,6 +476,7 @@ class Monitor:
                 '分叉任务只统计分叉后实际请求，继承的历史累计值不再次计费。',
                 '日期按本机时区。进行中的请求须写入用量记录后才会显示，刷新不会调用模型。',
                 '这是本机日志中可见的 token 处理量，并非人民币账单或账户额度百分比；不额外统计图片、视频等外部工具费用。',
+                '人民币参考值按用户设定的 20x 方案统一分摊：20亿Token/周×4周对应200美元，再按自定汇率换算；不代表官方固定Token配额或逐次扣费，缺失记录仅保留已确认部分。',
             ],
         }
 
@@ -529,6 +547,13 @@ def make_handler(monitor):
                     self.send_data(200, path.read_bytes(), content_type)
                 elif route == '/assets/logo.jpg':
                     self.send_data(200, (BASE / 'assets' / 'logo.jpg').read_bytes(), 'image/jpeg')
+                elif route in ('/assets/insights.js', '/assets/insights.css'):
+                    content_type = ('text/javascript' if route.endswith('.js') else 'text/css')
+                    self.send_data(200, (BASE / route.lstrip('/')).read_bytes(), content_type + '; charset=utf-8')
+                elif route == '/api/account':
+                    from account_usage import load_account_usage
+                    self.send_data(200, json.dumps(load_account_usage(BASE, codex_home=monitor.home), ensure_ascii=False).encode(),
+                                   'application/json; charset=utf-8')
                 elif route == '/api/usage':
                     self.send_data(200, json.dumps(monitor.snapshot(), ensure_ascii=False).encode(),
                                    'application/json; charset=utf-8')

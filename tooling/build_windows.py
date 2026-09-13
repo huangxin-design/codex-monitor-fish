@@ -22,6 +22,8 @@ def main():
         (app / 'index.html', 'app'),
         (app / 'assets/avatar.svg', 'app/assets'),
         (app / 'assets/logo.jpg', 'app/assets'),
+        (app / 'assets/insights.js', 'app/assets'),
+        (app / 'assets/insights.css', 'app/assets'),
         (desktop / 'setup.html', 'desktop'),
         (desktop / 'setup.js', 'desktop'),
         (desktop / 'desktop.js', 'desktop'),

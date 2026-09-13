@@ -37,6 +37,8 @@ jobs:
         run: python -B -m unittest discover -s tests -p "test_*.py" -v
       - name: Test desktop discovery and local service
         run: python -B -m unittest discover -s desktop -p "test_runtime.py" -v
+      - name: Test subscription cost and reset display
+        run: node --test tests/test_insights.cjs
       - name: Build skill archive
         run: python -B tooling/build_release.py
       - name: Verify archive and checksum

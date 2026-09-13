@@ -612,7 +612,7 @@ class HttpTests(unittest.TestCase):
                 opener.return_value.open.return_value.__enter__.return_value = io.BytesIO(json.dumps(invalid).encode())
                 self.assertIsNone(runtime.existing_url(self.data))
         health = json.loads(self.request('GET', '/api/health')[2])
-        self.assertEqual(health['version'], '0.2.4')
+        self.assertEqual(health['version'], runtime.VERSION)
 
     def test_quit_replies_before_stopping_own_server(self):
         self.assertEqual(self.post({}, route='/api/quit')[0], 200)
@@ -638,7 +638,7 @@ class LifecycleTests(unittest.TestCase):
                     time.sleep(0.05)
                 self.assertTrue(metadata.is_file())
                 saved = json.loads(metadata.read_text(encoding='utf-8'))
-                self.assertEqual(saved['version'], '0.2.4')
+                self.assertEqual(saved['version'], runtime.VERSION)
                 repeat = subprocess.run(command, capture_output=True, timeout=8)
                 self.assertEqual(repeat.returncode, 0, repeat.stderr.decode(errors='replace'))
                 self.assertEqual(json.loads(metadata.read_text(encoding='utf-8')), saved)

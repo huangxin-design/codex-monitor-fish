@@ -33,7 +33,7 @@ class ReleaseTests(unittest.TestCase):
 
     def test_runtime_data_and_unlisted_files_are_never_included(self):
         app = self.root / 'skills' / module.SKILL_NAME / 'assets' / 'app'
-        for name in ('config.json', 'usage-snapshot.json', 'usage-summary.csv', 'monitor.log',
+        for name in ('config.json', 'usage-snapshot.json', 'usage-summary.csv', 'account-usage.json', 'monitor.log',
                      '.env', '__pycache__/monitor.pyc', 'assets/private-avatar.jpg'):
             private = app / name
             private.parent.mkdir(parents=True, exist_ok=True)

@@ -23,6 +23,7 @@
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}.orb-depth,.mesh-depth{transform:none}}
 .loading{margin:0 0 22px;padding:20px 23px;border:1px solid #a8374f55;border-radius:15px;background:linear-gradient(115deg,#26141c,#161215);color:#c6adb9;font-size:13px;line-height:1.8}.loading-heading{display:flex;align-items:center;gap:12px}.loading-heading strong{font-size:14px;font-weight:550;color:#f1dce4}.loading-percent{margin-left:auto;color:#ff8ca2;font-size:20px;font-weight:550;font-variant-numeric:tabular-nums}.loading-track{height:6px;overflow:hidden;border-radius:9px;background:#ffffff0b;margin:12px 0 9px}.loading-fill{display:block;height:100%;width:0;background:linear-gradient(90deg,#b30c2f,#ff758f);border-radius:inherit;transition:width .45s ease}.loading-track.is-indeterminate .loading-fill{width:30%;animation:loading-sweep 1.5s ease-in-out infinite}.loading-counts{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:#c8abb9;font-size:12px;font-variant-numeric:tabular-nums}.loading-current{margin:9px 0 0;overflow-wrap:anywhere;color:#ead4de}.loading-note{margin:3px 0 0;color:#a58b99;font-size:12px}@keyframes loading-sweep{from{transform:translateX(-110%)}to{transform:translateX(440%)}}@media(prefers-reduced-motion:reduce){.loading-fill{transition:none}.loading-track.is-indeterminate .loading-fill{animation:none;opacity:.6}}@media(max-width:640px){.loading{padding:16px}.loading-heading strong{font-size:13px}.loading-percent{font-size:17px}}
 </style>
+  <link rel="stylesheet" href="/assets/insights.css">
 </head>
 <body>
 <main>
@@ -32,13 +33,21 @@
     <div class="profile"><button class="avatar-wrap" id="avatar-button" type="button" title="更换我的头像" aria-label="更换我的头像"><img id="user-avatar" src="/assets/avatar.svg" alt="用户头像" width="32" height="32"></button><input id="avatar-upload" type="file" accept="image/jpeg,image/png,image/webp" hidden><div class="profile-copy">我的工作台<span>PERSONAL WORKSPACE</span></div><span class="avatar-feedback" id="avatar-feedback" role="status" hidden></span></div>
   </header>
   <section class="hero" aria-labelledby="page-title">
-    <div class="hero-copy"><p class="eyebrow">PERSONAL WORKSPACE / 本地用量</p><h1 id="page-title">Token 用量监控</h1><p class="intro">让每一次创作，都有迹可循。<br><span id="project-intro">自动发现所选项目的新增任务，持续记录历史用量。</span></p>
+    <div class="hero-copy"><p class="eyebrow">PERSONAL WORKSPACE / 本地用量</p><h1 id="page-title"><span>Token</span> 用量监控</h1><p class="intro">项目用量、订阅摊算与重置时间，都在这里。<br><span id="project-intro">自动发现所选项目的新增任务，持续记录历史用量。</span></p>
     <div class="hero-actions">
       <button class="button" id="pause" type="button" aria-pressed="false"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M7 5v10M13 5v10"/></svg><span id="pause-label">暂停刷新</span></button>
       <button class="button" id="export" type="button" disabled><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M10 3v9m-3-3 3 3 3-3M4 12v4h12v-4"/></svg>导出 CSV</button>
       <button class="button primary" id="refresh" type="button"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M15.5 7A6 6 0 1 0 16 12M16 3v4h-4" stroke-linecap="round" stroke-linejoin="round"/></svg>立即刷新</button>
     </div>
     </div>
+    <aside class="hero-reset" aria-labelledby="reset-heading">
+      <div class="reset-heading"><h2 id="reset-heading">预计下一轮重置</h2><button class="button" id="account-refresh" type="button" title="刷新账户重置时间">刷新</button></div>
+      <p class="account-status" id="account-status" role="status">正在读取账户快照…</p>
+      <div class="reset-time" id="account-reset-time">—</div>
+      <p class="reset-countdown" id="account-countdown">读取官方记录后显示</p>
+      <p class="reset-source" id="account-source">官方账户快照</p>
+      <p class="account-error" id="account-error" role="status" hidden></p>
+    </aside>
     <div class="hero-art" aria-hidden="true">
       <svg viewBox="0 0 340 235" preserveAspectRatio="xMinYMid meet" fill="none">
         <defs>
@@ -69,10 +78,15 @@
   <details class="scope-explainer" aria-label="项目处理量与账户额度的区别">
     <summary><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 7v4m0-7v1"/></svg><strong>项目历史处理量 ≠ 账户额度消耗比例</strong><span class="scope-hint">统计说明</span></summary>
     <div class="scope-body"><p>本页累计所选项目自任务开始以来的输入与输出，包括缓存和重复读取的上下文；账户额度重置后，这里的历史量仍然保留。</p>
-    <p>Codex 的“使用情况”显示账户在当前额度窗口内的剩余比例。模型、上下文、推理、工具使用和缓存都会影响额度消耗，不能按这里的 Token 总量换算百分比。<a href="https://learn.chatgpt.com/docs/pricing#what-are-the-usage-limits-for-my-plan" target="_blank" rel="noopener noreferrer">官方说明</a></p></div>
+    <p>Codex 的“使用情况”显示账户在当前额度窗口内的剩余比例。模型、上下文、推理、工具使用和缓存都会影响额度消耗，不能按这里的 Token 总量换算百分比。<a href="https://learn.chatgpt.com/docs/pricing#what-are-the-usage-limits-for-my-plan" target="_blank" rel="noopener noreferrer">官方说明</a></p>
+    <div class="cost-settings"><p id="cost-basis">订阅摊算假设：20 倍方案每周 20 亿 Token，4 周共 80 亿 Token，对应 200 美元；这是自定义参考口径，不是官方固定配额或实际账单。</p>
+      <div class="exchange-control"><label for="usd-cny">1 美元 ≈</label><input id="usd-cny" type="number" min="0.01" max="1000" step="0.01" inputmode="decimal" value="7.00" aria-describedby="exchange-hint exchange-error"><span>人民币</span></div>
+      <p class="exchange-hint" id="exchange-hint">示例汇率，可修改（非实时）</p>
+      <p class="exchange-error" id="exchange-error" role="status" hidden>请输入 0.01–1000 之间的汇率，仍按上次有效值计算。</p>
+    </div></div>
   </details>
   <section class="metrics" aria-label="用量概览">
-    <article class="metric total"><div class="metric-label"><span id="total-label">项目累计处理量</span><span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 11 6 8l3 2 4-6M10 4h3v3"/></svg></span></div><div class="metric-value" id="total-value">—</div><div class="metric-unit">TOKENS</div><div class="metric-note" id="total-note">全部历史 · 输入 + 输出</div></article>
+    <article class="metric total"><div class="metric-label"><span id="total-label">项目累计处理量</span><span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 11 6 8l3 2 4-6M10 4h3v3"/></svg></span></div><div class="total-figures"><div class="token-figure"><div class="metric-value" id="total-value">—</div><div class="metric-unit">TOKENS</div></div><div class="cost-figure"><div class="cost-value" id="cost-value">—</div><div class="cost-qualifier" id="cost-qualifier">订阅摊算</div><div class="cost-account-note">此为20x账户算法</div></div></div><div class="metric-note" id="total-note">全部历史 · 输入 + 输出</div></article>
     <article class="metric"><div class="metric-label">未缓存输入<span class="metric-icon" aria-hidden="true">↗</span></div><div class="metric-value" id="input-value">—</div><div class="metric-unit">TOKENS</div><div class="metric-note">输入 token 扣除缓存部分</div></article>
     <article class="metric"><div class="metric-label">缓存输入<span class="metric-icon" aria-hidden="true">◫</span></div><div class="metric-value" id="cached-value">—</div><div class="metric-unit">TOKENS</div><div class="metric-note" id="cache-note">缓存是输入的一部分</div></article>
     <article class="metric"><div class="metric-label">输出<span class="metric-icon" aria-hidden="true">↙</span></div><div class="metric-value" id="output-value">—</div><div class="metric-unit">TOKENS</div><div class="metric-note" id="reasoning-note">包含推理 token</div></article>
@@ -89,6 +103,7 @@
   <aside class="notes" aria-label="统计说明"><p>仅使用本地用量元数据。Token 数不是人民币账单，也不等于订阅额度的消耗比例；外部图片、视频等工具费用未单独计入。</p><p id="warnings"></p><p class="source" id="source"></p></aside>
   <footer class="page-footer"><span class="page-footer-brand"><i class="footer-dot" aria-hidden="true"></i>Token Monitor · 本地统计</span><span id="update-time">等待首次读取 · 每 10 秒自动刷新</span></footer>
 </main>
+<script src="/assets/insights.js"></script>
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
@@ -217,7 +232,7 @@ function usageNode(tag, className, value, unavailable) {
   }
   return node;
 }
-function detailCard(title, usage, unavailable = false) {
+function detailCard(title, usage, unavailable = false, cost = null) {
   const card = el('div', 'detail-card');
   card.append(el('h3', '', title));
   const list = el('dl');
@@ -226,6 +241,9 @@ function detailCard(title, usage, unavailable = false) {
     row.append(el('dt', '', label), usageNode('dd', '', amount(usage,key),unavailable));
     list.append(row);
   }
+  const costRow = el('div','detail-cost');
+  costRow.append(el('dt','','订阅摊算'),el('dd','',FishInsights.moneyText(cost)));
+  list.append(costRow);
   card.append(list);
   return card;
 }
@@ -252,6 +270,10 @@ function taskRows(task, index) {
   for (const [key,label] of [['input_tokens','输入'],['cached_input_tokens','其中缓存'],['output_tokens','输出'],['total_tokens','合计']]) {
     const cell = usageNode('td','numeric' + (key === 'total_tokens' ? ' total-cell' : ''),amount(usage,key),selectedUnavailable(task));
     cell.dataset.label = label;
+    if (key === 'total_tokens') {
+      const money = el('span','task-money',FishInsights.moneyText(FishInsights.selectedCost(task,$('include-children').checked)));
+      money.title = '按设定的订阅方案摊算 · 非实际账单'; cell.append(money);
+    }
     row.append(cell);
   }
   const time = el('td','time-cell',timeText(task.last_activity));
@@ -261,7 +283,7 @@ function taskRows(task, index) {
   const detail = el('tr','detail-row'); detail.id = 'detail-' + index; detail.hidden = !expanded.has(task.id);
   const cell = el('td'); cell.colSpan = 7;
   const content = el('div','detail-content');
-  content.append(detailCard('任务本体',task.own,task.own_unavailable),detailCard('子任务 · ' + childCount + ' 个',task.children,task.children_unavailable),detailCard($('include-children').checked ? '当前统计 · 含子任务' : '当前统计 · 仅本体',usage,selectedUnavailable(task)));
+  content.append(detailCard('任务本体',task.own,task.own_unavailable,task.self_cost),detailCard('子任务 · ' + childCount + ' 个',task.children,task.children_unavailable,task.children_cost),detailCard($('include-children').checked ? '当前统计 · 含子任务' : '当前统计 · 仅本体',usage,selectedUnavailable(task),FishInsights.selectedCost(task,$('include-children').checked)));
   const metadata = el('div','detail-metadata','任务 ID：' + task.id + ' · 用量记录：' + format(task.response_count) + ' 条' + (task.records_source ? ' · 数据来源：' + task.records_source : ''));
   if (task.screenshot_title && task.screenshot_title !== task.title) metadata.prepend(el('p','task-alias','原始截图标题：' + task.screenshot_title));
   for (const warning of task.warnings || []) metadata.append(el('p','task-warning',warning));
@@ -277,6 +299,7 @@ function render(incremental = false) {
   document.querySelector('.eyebrow').textContent = (data.project_name || 'PERSONAL WORKSPACE') + ' / 本地用量';
   $('project-intro').textContent = '自动发现 ' + (data.project_name || '所选项目') + ' 的新增任务，持续记录历史用量。';
   const tasks = Array.isArray(data.tasks) ? [...data.tasks] : [];
+  FishInsights.renderCost(data,tasks,$('include-children').checked);
   const total = totalsFor(tasks);
   const incomplete = tasks.some(selectedUnavailable);
   for (const [id, value] of [['total-value',total.total_tokens],['input-value',Math.max(0,total.input_tokens-total.cached_input_tokens)],['cached-value',total.cached_input_tokens],['output-value',total.output_tokens]]) {
@@ -337,6 +360,7 @@ function scopeKey(snapshot) {
 }
 function clearSnapshot() {
   data = null; expanded.clear();
+  FishInsights.clearCost();
   for (const id of ['total-value','input-value','cached-value','output-value']) {
     $(id).textContent = '—'; $(id).removeAttribute('title');
   }
@@ -473,6 +497,7 @@ $('unit').addEventListener('change',() => {
   if (data) render();
 });
 $('export').addEventListener('click',exportCsv);
+window.addEventListener('fish-cost-rate-change',() => { if (data) render(); });
 refresh();
 </script>
 </body>

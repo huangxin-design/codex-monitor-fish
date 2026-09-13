@@ -2,6 +2,7 @@
 **/config.json
 **/usage-snapshot.json
 **/usage-summary.csv
+**/account-usage.json
 **/*.sqlite*
 **/*.jsonl
 **/*.log

@@ -24,8 +24,9 @@ APP = ROOT / 'app'
 DESKTOP = ROOT / 'desktop'
 sys.path.insert(0, str(APP))
 import monitor as accounting
+import account_usage
 APP_ID = 'codex-monitor-fish-desktop'
-VERSION = '0.2.4'
+VERSION = '0.3.1'
 MAX_BODY = 16 * 1024
 
 
@@ -115,6 +116,10 @@ class DesktopState:
         self.scan_error = None
         self.scan_progress = None
         self.scan_partial = None
+        self.account_result = None
+        self.account_checked_at = None
+        self.account_running = False
+        self.account_refresh_error = None
         try:
             if self.settings_path.is_file():
                 settings = json.loads(self.settings_path.read_text(encoding='utf-8'))
@@ -170,7 +175,48 @@ class DesktopState:
             self.startup_error = None
             self.scan_result = self.scan_error = self.scan_completed_at = None
             self.scan_progress = self.scan_partial = None
+            self.account_result = self.account_checked_at = None
+            self.account_refresh_error = None
             return {'ok': True, 'project_directory': config['project_directory']}
+
+    def _read_account(self, home):
+        try:
+            result = account_usage.read_official_account(home)
+        except Exception:
+            result = {'status': 'unavailable', 'error': '暂时无法读取官方账户额度。'}
+        with self.lock:
+            if self.home == home:
+                self.account_refresh_error = result.get('error') if result.get('status') == 'unavailable' else None
+                if result.get('status') != 'unavailable' or self.account_result is None:
+                    self.account_result = result
+                self.account_checked_at = time.monotonic()
+            self.account_running = False
+
+    def account_response(self, refresh=False):
+        """Serve dated metadata promptly; at most one read-only CLI query at a time."""
+        with self.lock:
+            snapshot = account_usage.load_account_usage(self.data_dir, codex_home=self.home)
+            cached = deepcopy(self.account_result)
+            result = snapshot
+            if cached and cached.get('status') in ('available', 'stale'):
+                if (cached.get('fetched_at') or '') > (snapshot.get('fetched_at') or ''):
+                    result = cached
+                    age = time.time() - accounting.parse_time(result['fetched_at']).timestamp()
+                    if age > 900:
+                        result['status'] = 'stale'
+            elif cached:
+                if snapshot['status'] == 'unavailable':
+                    result = {**snapshot, **cached}
+                else:
+                    result['refresh_error'] = cached.get('error')
+            due = self.account_checked_at is None or time.monotonic() - self.account_checked_at >= 120
+            expired = any(window.get('bucket') == 'codex' and window.get('resets_at') is not None
+                          and window['resets_at'] <= time.time() for window in result.get('windows', []))
+            if not self.account_running and (refresh or (result['status'] != 'available' or expired) and due):
+                self.account_running = True
+                threading.Thread(target=self._read_account, args=(self.home,), daemon=True).start()
+            return {**result, 'refresh_error': self.account_refresh_error or result.get('refresh_error'),
+                    'refreshing': self.account_running}
 
     def snapshot(self):
         with self.lock:
@@ -272,6 +318,8 @@ def make_handler(state):
                         self.send_json(400, {'error': '请在监控器页面中更改数据目录。'})
                     else:
                         self.send_json(200, state.setup_info())
+                elif route.path == '/api/account':
+                    self.send_json(200, state.account_response())
                 elif route.path in ('/', '/index.html', '/setup'):
                     if route.path == '/setup' or state.monitor is None:
                         body = (DESKTOP / 'setup.html').read_bytes()
@@ -285,6 +333,9 @@ def make_handler(state):
                     self.send_data(200, (APP / 'assets/avatar.svg').read_bytes(), 'image/svg+xml')
                 elif route.path == '/assets/logo.jpg':
                     self.send_data(200, (APP / 'assets/logo.jpg').read_bytes(), 'image/jpeg')
+                elif route.path in ('/assets/insights.js', '/assets/insights.css'):
+                    content_type = 'text/javascript' if route.path.endswith('.js') else 'text/css'
+                    self.send_data(200, (APP / route.path.lstrip('/')).read_bytes(), content_type + '; charset=utf-8')
                 elif route.path == '/api/usage':
                     refresh = parse_qs(route.query).get('refresh') == ['1']
                     status, body = state.usage_response(refresh)
@@ -339,6 +390,8 @@ def make_handler(state):
             try:
                 if route == '/api/setup':
                     self.send_json(200, state.configure(payload))
+                elif route == '/api/account/refresh':
+                    self.send_json(200, state.account_response(refresh=True))
                 elif route == '/api/discover':
                     home = payload.get('codex_home')
                     if not isinstance(home, str) or not home.strip():

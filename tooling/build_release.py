@@ -16,11 +16,16 @@ SKILL_FILES = (
     'references/accounting.md',
     'scripts/setup_monitor.py',
     'scripts/start_monitor.py',
+    'scripts/save_account_snapshot.py',
     'assets/desktop/runtime.py',
     'assets/desktop/setup.html',
     'assets/desktop/setup.js',
     'assets/desktop/desktop.js',
     'assets/app/monitor.py',
+    'assets/app/pricing.py',
+    'assets/app/test_pricing.py',
+    'assets/app/account_usage.py',
+    'assets/app/test_account_usage.py',
     'assets/app/test_monitor.py',
     'assets/app/launch.py',
     'assets/app/index.html',
@@ -29,6 +34,8 @@ SKILL_FILES = (
     'assets/app/打开监控器.cmd',
     'assets/app/assets/logo.jpg',
     'assets/app/assets/avatar.svg',
+    'assets/app/assets/insights.js',
+    'assets/app/assets/insights.css',
 )
 
 

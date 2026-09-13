@@ -89,14 +89,34 @@ class SkillStartTests(unittest.TestCase):
                 continue
             # Never send quit unless the live identity is exactly the process this test started.
             self.assertEqual(actual, expected)
-            _, setup = self.request(endpoint, '/api/setup')
-            status, _ = self.request(endpoint, '/api/quit', {}, setup['csrf_token'])
-            self.assertEqual(status, 200)
-            deadline = time.monotonic() + 5
-            saved = Path(expected['data_dir']) / 'server.json'
-            while saved.exists() and time.monotonic() < deadline:
-                time.sleep(.05)
-            self.assertFalse(saved.exists(), 'Owned test server did not shut down.')
+            process = None
+            if os.name == 'nt':
+                import ctypes
+                from ctypes import wintypes
+                kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+                kernel32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+                kernel32.OpenProcess.restype = wintypes.HANDLE
+                kernel32.WaitForSingleObject.argtypes = (wintypes.HANDLE, wintypes.DWORD)
+                kernel32.WaitForSingleObject.restype = wintypes.DWORD
+                kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+                kernel32.CloseHandle.restype = wintypes.BOOL
+                process = kernel32.OpenProcess(0x00100000, False, expected['pid'])  # SYNCHRONIZE only.
+                self.assertTrue(process, f'Cannot wait for owned server: {ctypes.get_last_error()}')
+            try:
+                _, setup = self.request(endpoint, '/api/setup')
+                status, _ = self.request(endpoint, '/api/quit', {}, setup['csrf_token'])
+                self.assertEqual(status, 200)
+                deadline = time.monotonic() + 5
+                saved = Path(expected['data_dir']) / 'server.json'
+                while saved.exists() and time.monotonic() < deadline:
+                    time.sleep(.05)
+                self.assertFalse(saved.exists(), 'Owned test server did not shut down.')
+                if process:
+                    self.assertEqual(kernel32.WaitForSingleObject(process, 5000), 0,
+                                     'Owned test server did not exit and release its files.')
+            finally:
+                if process:
+                    kernel32.CloseHandle(process)
         self.servers.clear()
 
     def select(self, endpoint, project):
