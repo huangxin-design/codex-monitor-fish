@@ -375,6 +375,7 @@ class Monitor:
             emit()
             own, children = zero(), zero()
             own_cost, children_cost = zero_cost(), zero_cost()
+            child_details = []
             unavailable_logs = 0
             own_unavailable = children_unavailable = False
             task_warnings, models = [], []
@@ -391,6 +392,9 @@ class Monitor:
                         own_unavailable = True
                     else:
                         children_unavailable = True
+                        child_details.append({'id': ident, 'title': '未命名子任务', 'model': '未记录',
+                                              'usage': zero(), 'cost': zero_cost(incomplete=True),
+                                              'unavailable': True})
                     state['logs_done'] += 1
                     emit()
                     continue
@@ -408,6 +412,12 @@ class Monitor:
                 else:
                     children = add(children, data['usage'])
                     children_cost = add_costs(children_cost, data['cost'])
+                    child_details.append({
+                        'id': ident, 'title': row.get('name') or '未命名子任务',
+                        'model': ' / '.join(dict.fromkeys(data['models'])) or row.get('model') or '未记录',
+                        'usage': data['usage'], 'cost': data['cost'],
+                        'unavailable': bool(data.get('unavailable')),
+                    })
                 response_count += data['response_count']
                 task_warnings.extend(data['warnings'])
                 models.extend(data['models'])
@@ -430,6 +440,7 @@ class Monitor:
                 'total_cost': add_costs(own_cost, children_cost),
                 'unavailable_logs': unavailable_logs, 'own_unavailable': own_unavailable,
                 'children_unavailable': children_unavailable,
+                'child_details': child_details,
                 'child_count': len(members) - 1, 'response_count': response_count,
                 'last_activity': latest,
                 'model': ' / '.join(dict.fromkeys(models)) or row.get('model') or '未记录',

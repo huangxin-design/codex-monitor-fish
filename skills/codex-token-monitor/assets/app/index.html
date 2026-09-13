@@ -86,7 +86,7 @@
     </div></div>
   </details>
   <section class="metrics" aria-label="用量概览">
-    <article class="metric total"><div class="metric-label"><span id="total-label">项目累计处理量</span><span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 11 6 8l3 2 4-6M10 4h3v3"/></svg></span></div><div class="total-figures"><div class="token-figure"><div class="metric-value" id="total-value">—</div><div class="metric-unit">TOKENS</div></div><div class="cost-figure"><div class="cost-value" id="cost-value">—</div><div class="cost-qualifier" id="cost-qualifier">订阅摊算</div><div class="cost-account-note">此为20x账户算法</div></div></div><div class="metric-note" id="total-note">全部历史 · 输入 + 输出</div></article>
+    <article class="metric total"><div class="metric-label"><span id="total-label">项目累计处理量</span><span class="metric-icon" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 11 6 8l3 2 4-6M10 4h3v3"/></svg></span></div><div class="total-figures"><div class="token-figure"><div class="metric-value" id="total-value">—</div><div class="metric-unit">TOKENS</div></div><div class="cost-figure"><div class="cost-value" id="cost-value">—</div><div class="cost-qualifier" id="cost-qualifier">订阅摊算</div></div></div><div class="total-footer"><div class="metric-note" id="total-note">全部历史 · 输入 + 输出</div><span class="cost-account-note">此为20x账户算法</span></div></article>
     <article class="metric"><div class="metric-label">未缓存输入<span class="metric-icon" aria-hidden="true">↗</span></div><div class="metric-value" id="input-value">—</div><div class="metric-unit">TOKENS</div><div class="metric-note">输入 token 扣除缓存部分</div></article>
     <article class="metric"><div class="metric-label">缓存输入<span class="metric-icon" aria-hidden="true">◫</span></div><div class="metric-value" id="cached-value">—</div><div class="metric-unit">TOKENS</div><div class="metric-note" id="cache-note">缓存是输入的一部分</div></article>
     <article class="metric"><div class="metric-label">输出<span class="metric-icon" aria-hidden="true">↙</span></div><div class="metric-value" id="output-value">—</div><div class="metric-unit">TOKENS</div><div class="metric-note" id="reasoning-note">包含推理 token</div></article>
@@ -247,6 +247,24 @@ function detailCard(title, usage, unavailable = false, cost = null) {
   card.append(list);
   return card;
 }
+function childBreakdown(children) {
+  const section = el('section','child-breakdown');
+  section.append(el('h3','','子任务明细'),el('p','child-note','每项仅统计该子任务本体；更深层子任务单独列出。'));
+  const list = el('ul','child-list');
+  for (const child of children) {
+    const item = el('li','child-item'), name = el('div','child-name');
+    const title = el('span','child-title',child.title || '未命名子任务');
+    title.title = '子任务 ID：' + child.id;
+    name.append(title,el('span','child-model',child.model || '未记录'));
+    const tokens = usageNode('span','child-tokens',amount(child.usage,'total_tokens'),child.unavailable);
+    tokens.append(' Token');
+    const money = el('span','child-money',FishInsights.moneyText(child.cost));
+    money.title = '按设定的订阅方案摊算 · 非实际账单';
+    item.append(name,tokens,money); list.append(item);
+  }
+  section.append(list);
+  return section;
+}
 function taskRows(task, index) {
   const usage = selectedUsage(task);
   const row = el('tr', 'task-row' + (expanded.has(task.id) ? ' is-expanded' : ''));
@@ -284,6 +302,7 @@ function taskRows(task, index) {
   const cell = el('td'); cell.colSpan = 7;
   const content = el('div','detail-content');
   content.append(detailCard('任务本体',task.own,task.own_unavailable,task.self_cost),detailCard('子任务 · ' + childCount + ' 个',task.children,task.children_unavailable,task.children_cost),detailCard($('include-children').checked ? '当前统计 · 含子任务' : '当前统计 · 仅本体',usage,selectedUnavailable(task),FishInsights.selectedCost(task,$('include-children').checked)));
+  if (task.child_details?.length) content.append(childBreakdown(task.child_details));
   const metadata = el('div','detail-metadata','任务 ID：' + task.id + ' · 用量记录：' + format(task.response_count) + ' 条' + (task.records_source ? ' · 数据来源：' + task.records_source : ''));
   if (task.screenshot_title && task.screenshot_title !== task.title) metadata.prepend(el('p','task-alias','原始截图标题：' + task.screenshot_title));
   for (const warning of task.warnings || []) metadata.append(el('p','task-warning',warning));

@@ -43,6 +43,35 @@ async function mount(snapshot) {
   return {element, insights: context.window.FishInsights};
 }
 
+function taskRenderer(ui) {
+  const html = fs.readFileSync(path.join(__dirname,
+    '../skills/codex-token-monitor/assets/app/index.html'), 'utf8');
+  const createElement = tag => ({
+    tagName: tag, className: '', children: [], dataset: {},
+    get textContent() {
+      return this.children.map(child => typeof child === 'string' ? child : child.textContent).join('');
+    },
+    set textContent(value) { this.children = [String(value)]; },
+    append(...nodes) { this.children.push(...nodes); },
+    prepend(...nodes) { this.children.unshift(...nodes); },
+    setAttribute() {}, addEventListener() {},
+    set innerHTML(value) { throw new Error('Task content must be rendered as text'); },
+  });
+  const helpers = html.slice(html.indexOf('const $ ='), html.indexOf('const hero ='));
+  const renderers = html.slice(html.indexOf('function totalsFor('), html.indexOf('function render('));
+  return vm.runInNewContext(helpers + renderers + '\n({childBreakdown, taskRows})', {
+    document: {getElementById: ui.element, createElement,
+      createElementNS(namespace, tag) { return createElement(tag); }},
+    FishInsights: ui.insights, Intl,
+  }, {filename: 'index.html'});
+}
+
+function nodesWithClass(node, className) {
+  if (typeof node === 'string') return [];
+  return (node.className.split(' ').includes(className) ? [node] : [])
+    .concat(node.children.flatMap(child => nodesWithClass(child, className)));
+}
+
 test('the Codex weekly window wins over earlier Spark and short-window resets', async () => {
   const ui = await mount(account([
     window('codex_bengalfox', 300, 1), window('codex', 300, 2), window('codex', 10080, 54),
@@ -109,4 +138,62 @@ test('partial data without any confirmed cost displays unknown, not zero', async
     assert.equal(ui.element('cost-value').textContent, '—');
   }
   assert.equal(ui.insights.moneyText({usd: 0, priced_responses: 0, incomplete: true}), '—');
+});
+
+test('task details show each child with literal titles and the current RMB conversion', async () => {
+  const ui = await mount(account([]));
+  const renderer = taskRenderer(ui);
+  const child = {id: 'child', title: '<img src=x onerror=alert(1)>', model: 'gpt-5.5',
+    usage: {total_tokens: 100000000}, cost: {usd: 2.5, priced_responses: 1}};
+  const task = {id: 'parent', child_count: 1, child_details: [child]};
+  const details = () => renderer.taskRows(task, 0)[1];
+  const section = nodesWithClass(details(), 'child-breakdown')[0];
+  assert.ok(section);
+  assert.equal(section.children[0].textContent, '子任务明细');
+  assert.equal(nodesWithClass(section, 'child-note')[0].textContent,
+    '每项仅统计该子任务本体；更深层子任务单独列出。');
+  assert.equal(nodesWithClass(section, 'child-item').length, 1);
+  assert.equal(nodesWithClass(section, 'child-title')[0].textContent, child.title);
+  assert.equal(nodesWithClass(section, 'child-model')[0].textContent, child.model);
+  assert.equal(nodesWithClass(section, 'child-money')[0].textContent, '约 ¥ 17.50');
+  const input = ui.element('usd-cny');
+  input.value = '8'; input.listeners.input({target: input});
+  assert.equal(nodesWithClass(details(), 'child-money')[0].textContent, '约 ¥ 20.00');
+  for (const child_details of [undefined, []]) {
+    const emptyDetails = renderer.taskRows({...task, child_details}, 0)[1];
+    assert.equal(nodesWithClass(emptyDetails, 'child-breakdown').length, 0);
+  }
+});
+
+test('child RMB values retain unknown, partial and sub-cent cost distinctions', async () => {
+  const renderer = taskRenderer(await mount(account([])));
+  const costs = [
+    null,
+    {usd: 0, priced_responses: 0, incomplete: true},
+    {usd: 1, priced_responses: 1, unpriced_responses: 1},
+    {usd: 0.0001, priced_responses: 1},
+    {usd: 0, priced_responses: 1},
+  ];
+  const section = renderer.childBreakdown(costs.map((cost, index) => ({
+    id: String(index), title: '子任务 ' + index, usage: {}, cost,
+  })));
+  assert.deepEqual(nodesWithClass(section, 'child-money').map(node => node.textContent), [
+    '—', '—', '已确认部分约 ¥ 7.00', '约 ¥ <0.01', '约 ¥ 0.00',
+  ]);
+});
+
+test('child token values follow the selected unit and preserve incomplete usage markers', async () => {
+  const ui = await mount(account([]));
+  const renderer = taskRenderer(ui);
+  const children = [
+    {id: 'complete', usage: {total_tokens: 100000000}},
+    {id: 'partial', usage: {total_tokens: 200000000}, unavailable: true},
+    {id: 'unknown', usage: {}, unavailable: true},
+  ];
+  const tokens = () => nodesWithClass(renderer.childBreakdown(children), 'child-tokens')
+    .map(node => node.textContent);
+  ui.element('unit').value = 'yi';
+  assert.deepEqual(tokens(), ['1 亿 Token', '≥ 2 亿 Token', '— Token']);
+  ui.element('unit').value = 'raw';
+  assert.deepEqual(tokens(), ['100,000,000 Token', '≥ 200,000,000 Token', '— Token']);
 });

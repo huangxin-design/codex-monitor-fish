@@ -5,7 +5,7 @@ import sqlite3
 import tempfile
 import unittest
 
-from monitor import Monitor, parse_records
+from monitor import Monitor, add, parse_records, zero
 from pricing import PRICING, add_costs, response_cost, zero_cost
 
 
@@ -112,30 +112,85 @@ class PricingTests(unittest.TestCase):
                 conn.execute('CREATE TABLE thread_spawn_edges (parent_thread_id TEXT, child_thread_id TEXT)')
                 for ident, source, model in (('root', 'user', 'gpt-6-astra'),
                                               ('child', 'subagent', 'gpt-5.6-luna'),
+                                              ('grandchild', 'subagent', 'gpt-5.6-terra'),
                                               ('unknown', 'subagent', 'unknown-model')):
                     path = home / (ident + '.jsonl')
                     write_log(path, [context(model), record(ident, thread=ident)])
                     conn.execute('INSERT INTO threads VALUES (?,?,?,?,?,?,?,?)',
                                  (ident, ident, str(path), 'gpt-6-astra', 0, '/demo', source, 0))
                 conn.executemany('INSERT INTO thread_spawn_edges VALUES (?,?)',
-                                 [('root', 'child'), ('root', 'child'), ('root', 'unknown'), ('child', 'missing')])
+                                 [('root', 'child'), ('root', 'child'), ('root', 'unknown'),
+                                  ('child', 'grandchild'), ('root', 'grandchild'), ('child', 'missing')])
                 conn.commit()
             monitor = Monitor({'codex_home': str(home), 'project_directory': '/demo'})
             data = monitor.snapshot()
             task = data['tasks'][0]
             self.assertAlmostEqual(task['self_cost']['usd'], .00275)
-            self.assertAlmostEqual(task['children_cost']['usd'], .0055)
+            self.assertAlmostEqual(task['children_cost']['usd'], .00825)
             self.assertFalse(task['self_cost']['incomplete'])
             self.assertTrue(task['children_cost']['incomplete'])
-            self.assertEqual(task['total_cost']['priced_responses'], 3)
+            self.assertEqual(task['total_cost']['priced_responses'], 4)
             self.assertEqual(task['total_cost']['unpriced_responses'], 0)
             self.assertEqual(data['cost_totals']['total'], task['total_cost'])
-            self.assertEqual(data['totals']['total_tokens'], 330_000)
+            self.assertEqual(data['totals']['total_tokens'], 440_000)
             self.assertTrue(data['incomplete'])
+            details = {child['id']: child for child in task['child_details']}
+            self.assertEqual(list(details), ['child', 'grandchild', 'missing', 'unknown'])
+            self.assertEqual(len(task['child_details']), 4)
+            self.assertEqual(details['child']['title'], 'child')
+            self.assertEqual(details['child']['model'], 'gpt-5.6-luna')
+            self.assertEqual(details['grandchild']['usage']['total_tokens'], 110_000)
+            self.assertEqual(details['child']['usage']['total_tokens'], 110_000)
+            self.assertFalse(details['unknown']['unavailable'])
+            self.assertEqual(details['unknown']['model'], 'unknown-model')
+            self.assertEqual(details['missing'], {
+                'id': 'missing', 'title': '未命名子任务', 'model': '未记录',
+                'usage': zero(), 'cost': zero_cost(True), 'unavailable': True})
+            self.assertEqual(add(*(child['usage'] for child in details.values())), task['children'])
+            self.assertEqual(add_costs(*(child['cost'] for child in details.values())), task['children_cost'])
             (home / 'root.jsonl').unlink()
             missing = monitor.snapshot()['tasks'][0]
             self.assertEqual(missing['self_cost'], zero_cost(True))
-            self.assertAlmostEqual(missing['total_cost']['usd'], .0055)
+            self.assertAlmostEqual(missing['total_cost']['usd'], .00825)
+            (home / 'child.jsonl').unlink()
+            missing = monitor.snapshot()['tasks'][0]
+            child = next(child for child in missing['child_details'] if child['id'] == 'child')
+            self.assertTrue(child['unavailable'])
+            self.assertEqual(child['cost'], zero_cost(True))
+            self.assertEqual(child['usage'], zero())
+            self.assertEqual(child['title'], 'child')
+            self.assertAlmostEqual(missing['children_cost']['usd'], .0055)
+
+    def test_shared_child_details_are_assigned_once_and_preserve_partial_cost(self):
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder)
+            with closing(sqlite3.connect(home / 'state_5.sqlite')) as conn:
+                conn.execute('CREATE TABLE threads (id TEXT, name TEXT, rollout_path TEXT, model TEXT, '
+                             'created_at_ms INTEGER, cwd TEXT, thread_source TEXT, archived INTEGER)')
+                conn.execute('CREATE TABLE thread_spawn_edges (parent_thread_id TEXT, child_thread_id TEXT)')
+                for ident, source in (('first', 'user'), ('second', 'user'), ('child', 'subagent')):
+                    path = home / (ident + '.jsonl')
+                    write_log(path, [record(ident, thread=ident), record(ident, thread=ident),
+                                     record('inherited', thread='parent')],
+                              tail=b'partial' if ident == 'child' else b'')
+                    conn.execute('INSERT INTO threads VALUES (?,?,?,?,?,?,?,?)',
+                                 (ident, ident, str(path), 'gpt-6-astra', 0, '/demo', source, 0))
+                conn.executemany('INSERT INTO thread_spawn_edges VALUES (?,?)',
+                                 [('first', 'child'), ('second', 'child')])
+                conn.commit()
+            data = Monitor({'codex_home': str(home), 'project_directory': '/demo'}).snapshot()
+            details = [child for task in data['tasks'] for child in task['child_details']]
+            self.assertEqual(len(details), 1)
+            self.assertEqual(details[0]['id'], 'child')
+            self.assertTrue(details[0]['unavailable'])
+            self.assertTrue(details[0]['cost']['incomplete'])
+            self.assertEqual(details[0]['cost']['priced_responses'], 1)
+            self.assertAlmostEqual(details[0]['cost']['usd'], .00275)
+            self.assertEqual(details[0]['usage']['total_tokens'], 110_000)
+            self.assertEqual(data['totals']['total_tokens'], 330_000)
+            for task in data['tasks']:
+                self.assertEqual(add_costs(*(child['cost'] for child in task['child_details'])),
+                                 task['children_cost'])
 
 
 if __name__ == '__main__':
