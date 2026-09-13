@@ -37,6 +37,7 @@ SKILL_FILES = (
     'assets/app/assets/insights.js',
     'assets/app/assets/insights.css',
 )
+DOC_IMAGES = ('dashboard-v0.3.1.png', 'cost-reset-v0.3.1.png')
 
 
 def source_files(root=ROOT):
@@ -44,6 +45,8 @@ def source_files(root=ROOT):
     files = {SKILL_NAME + '/' + name: root / 'skills' / SKILL_NAME / name
              for name in SKILL_FILES}
     files['使用说明.md'] = root / 'docs' / '使用说明.md'
+    for name in DOC_IMAGES:
+        files['images/' + name] = root / 'docs' / 'images' / name
     files['LICENSE'] = root / 'LICENSE'
     files['BRANDING.md'] = root / 'BRANDING.md'
     for path in files.values():
@@ -56,7 +59,7 @@ def source_files(root=ROOT):
     sources = {}
     for name in sorted(files):
         body = files[name].read_bytes()
-        if not name.endswith('.jpg'):
+        if not name.endswith(('.jpg', '.png')):
             # Git checkouts may use different native EOLs; release text is canonical.
             body = body.replace(b'\r\n', b'\n')
             if name.endswith('.cmd'):

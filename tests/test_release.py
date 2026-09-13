@@ -21,6 +21,10 @@ class ReleaseTests(unittest.TestCase):
             path.write_bytes(('synthetic fixture: ' + name).encode('utf-8'))
         (self.root / 'docs').mkdir()
         (self.root / 'docs' / '使用说明.md').write_text('Synthetic instructions.', encoding='utf-8')
+        (self.root / 'docs' / 'images').mkdir()
+        for name in module.DOC_IMAGES:
+            (self.root / 'docs' / 'images' / name).write_bytes(
+                b'\x89PNG\r\n\x1a\nsynthetic\r\nimage\x00' + name.encode('ascii'))
         (self.root / 'LICENSE').write_text('Synthetic license.', encoding='utf-8')
         (self.root / 'BRANDING.md').write_text('Synthetic branding terms.', encoding='utf-8')
 
@@ -38,13 +42,24 @@ class ReleaseTests(unittest.TestCase):
             private = app / name
             private.parent.mkdir(parents=True, exist_ok=True)
             private.write_text('PRIVATE SENTINEL', encoding='utf-8')
+        (self.root / 'docs' / 'images' / 'mobile-v0.3.1.png').write_bytes(b'PRIVATE SENTINEL')
         archive = module.build(self.root)
         with zipfile.ZipFile(archive) as bundle:
             self.assertIn('使用说明.md', bundle.namelist())
             self.assertIn('LICENSE', bundle.namelist())
             self.assertIn('BRANDING.md', bundle.namelist())
-            self.assertEqual(len(bundle.namelist()), len(module.SKILL_FILES) + 3)
+            self.assertEqual(len(bundle.namelist()), len(module.SKILL_FILES) + len(module.DOC_IMAGES) + 3)
             self.assertFalse(any(b'PRIVATE SENTINEL' in bundle.read(name) for name in bundle.namelist()))
+
+    def test_offline_guide_images_keep_binary_bytes_and_relative_paths(self):
+        archive = module.build(self.root)
+        with zipfile.ZipFile(archive) as bundle:
+            for name in module.DOC_IMAGES:
+                original = (self.root / 'docs' / 'images' / name).read_bytes()
+                archived = bundle.read('images/' + name)
+                self.assertEqual(archived, original)
+                self.assertTrue(archived.startswith(b'\x89PNG\r\n\x1a\n'))
+            self.assertNotIn('images/mobile-v0.3.1.png', bundle.namelist())
 
     def test_native_line_endings_do_not_change_release_bytes(self):
         command = self.root / 'skills' / module.SKILL_NAME / 'assets/app/start.cmd'
