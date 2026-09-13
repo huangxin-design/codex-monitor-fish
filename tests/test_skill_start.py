@@ -54,7 +54,10 @@ class SkillStartTests(unittest.TestCase):
         if not expect_success:
             self.assertNotEqual(result.returncode, 0, result.stdout)
             return result
-        self.assertEqual(result.returncode, 0, result.stderr)
+        if result.returncode:
+            log = (data or self.data) / 'monitor.log'
+            diagnostic = log.read_text(encoding='utf-8', errors='replace')[-8000:] if log.is_file() else '(missing)'
+            self.fail(f'{result.stderr}\nSynthetic monitor.log:\n{diagnostic}')
         payload = json.loads(result.stdout)
         self.assertFalse(payload['browser_opened'])
         endpoint = payload['url'].removesuffix('setup').rstrip('/')

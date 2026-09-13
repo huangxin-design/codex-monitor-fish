@@ -59,6 +59,27 @@ class DesktopTests(unittest.TestCase):
     def tearDown(self):
         self.temporary.cleanup()
 
+    def test_local_server_starts_and_serves_health_without_reverse_dns(self):
+        with patch.object(runtime.socket, 'getfqdn', side_effect=AssertionError('Unexpected reverse DNS')):
+            server = runtime.create_server(self.state, 0)
+            worker = threading.Thread(target=server.serve_forever, daemon=True)
+            worker.start()
+            try:
+                self.assertEqual(server.server_address[0], '127.0.0.1')
+                self.assertEqual(server.server_name, '127.0.0.1')
+                conn = http.client.HTTPConnection('127.0.0.1', server.server_port, timeout=3)
+                try:
+                    conn.request('GET', '/api/health')
+                    response = conn.getresponse()
+                    self.assertEqual(response.status, 200)
+                    self.assertEqual(json.load(response)['app'], runtime.APP_ID)
+                finally:
+                    conn.close()
+            finally:
+                server.shutdown()
+                server.server_close()
+                worker.join(timeout=3)
+
     def test_discovery_groups_normalized_paths_and_includes_archived_roots(self):
         projects = runtime.discover_projects(self.home)
         self.assertEqual(projects, [

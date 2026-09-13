@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import secrets
 import socket
+from socketserver import TCPServer
 import sqlite3
 import sys
 import threading
@@ -484,7 +485,9 @@ class LocalHTTPServer(ThreadingHTTPServer):
         # Windows SO_REUSEADDR can bind an occupied port and split its traffic.
         if hasattr(socket, 'SO_EXCLUSIVEADDRUSE'):
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
-        super().server_bind()
+        # The numeric loopback address needs no potentially slow reverse DNS lookup.
+        TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
 
 
 def create_server(state, port=18776):
